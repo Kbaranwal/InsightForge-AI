@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /auth
+Disallow: /reset-password
+Disallow: /dashboard
+Disallow: /upload
+Disallow: /datasets
+Disallow: /settings
