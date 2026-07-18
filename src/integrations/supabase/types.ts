@@ -14,16 +14,236 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analyses: {
+        Row: {
+          created_at: string
+          dashboard: Json | null
+          dataset_id: string
+          executive_summary: string | null
+          id: string
+          insights: Json | null
+          model: string | null
+          recommendations: Json | null
+          understanding: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dashboard?: Json | null
+          dataset_id: string
+          executive_summary?: string | null
+          id?: string
+          insights?: Json | null
+          model?: string | null
+          recommendations?: Json | null
+          understanding?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dashboard?: Json | null
+          dataset_id?: string
+          executive_summary?: string | null
+          id?: string
+          insights?: Json | null
+          model?: string | null
+          recommendations?: Json | null
+          understanding?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analyses_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          resource_id: string | null
+          resource_type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          dataset_id: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          dataset_id: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          dataset_id?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      datasets: {
+        Row: {
+          column_count: number
+          columns: Json
+          created_at: string
+          description: string | null
+          error_message: string | null
+          file_name: string
+          file_size: number
+          id: string
+          name: string
+          row_count: number
+          sample_rows: Json
+          status: Database["public"]["Enums"]["dataset_status"]
+          storage_path: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          column_count?: number
+          columns?: Json
+          created_at?: string
+          description?: string | null
+          error_message?: string | null
+          file_name: string
+          file_size?: number
+          id?: string
+          name: string
+          row_count?: number
+          sample_rows?: Json
+          status?: Database["public"]["Enums"]["dataset_status"]
+          storage_path?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          column_count?: number
+          columns?: Json
+          created_at?: string
+          description?: string | null
+          error_message?: string | null
+          file_name?: string
+          file_size?: number
+          id?: string
+          name?: string
+          row_count?: number
+          sample_rows?: Json
+          status?: Database["public"]["Enums"]["dataset_status"]
+          storage_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      dataset_status: "uploaded" | "analyzing" | "ready" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +370,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      dataset_status: ["uploaded", "analyzing", "ready", "failed"],
+    },
   },
 } as const
