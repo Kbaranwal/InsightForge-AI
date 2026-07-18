@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { generateText, NoObjectGeneratedError, Output } from "ai";
+import { generateObject, NoObjectGeneratedError } from "ai";
 import { createGateway, HEAVY_MODEL, DEFAULT_MODEL } from "./ai-gateway.server";
 
 // ---------- Types ----------
@@ -213,13 +213,13 @@ export const analyzeDataset = createServerFn({ method: "POST" })
 
     async function guarded<T>(prompt: string, schema: z.ZodType<T>, model: string): Promise<T | null> {
       try {
-        const { output } = await generateText({
+        const { object } = await generateObject({
           model: gateway(model),
-          output: Output.object({ schema: schema as never }),
+          schema: schema as never,
           prompt,
           temperature: 0.2,
         });
-        return output as T;
+        return object as T;
       } catch (e) {
         if (NoObjectGeneratedError.isInstance(e)) {
           try { return schema.parse(JSON.parse((e as { text?: string }).text ?? "")); } catch { return null; }
