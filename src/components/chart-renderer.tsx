@@ -27,9 +27,9 @@ function coerceNum(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function aggregate(rows: Array<Record<string, unknown>>, spec: ChartSpec) {
+function aggregate(rows: Array<Record<string, unknown>>, spec: ChartSpec): { rows: Array<Record<string, unknown>>; series: string[] } {
   const { x, y, aggregation, groupBy } = spec;
-  if (!x || y.length === 0) return [];
+  if (!x || y.length === 0) return { rows: [], series: [] };
 
   if (groupBy) {
     // Pivot: x on axis, groupBy as series
