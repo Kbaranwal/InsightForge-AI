@@ -121,7 +121,7 @@ export function ChartRenderer({ spec, rows }: { spec: ChartSpec; rows: Array<Rec
     );
   }
 
-  if (!computed || (computed as { rows: unknown[] }).rows.length === 0) {
+  if (!computed.rows.length) {
     return <div className="h-56 flex items-center justify-center text-xs text-muted-foreground">Not enough data to render this chart.</div>;
   }
   const { rows: data, series } = computed;
