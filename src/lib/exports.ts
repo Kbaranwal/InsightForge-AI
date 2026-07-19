@@ -187,11 +187,13 @@ export function exportPPTX(p: ExportPayload) {
     s.addText("Key Performance Indicators", T.title);
     const rows: pptxgen.TableRow[] = [
       [
-        { text: "KPI", options: { bold: true, fill: "0F172A", color: "FFFFFF" } },
-        { text: "Value", options: { bold: true, fill: "0F172A", color: "FFFFFF" } },
-        { text: "Explanation", options: { bold: true, fill: "0F172A", color: "FFFFFF" } },
+        { text: "KPI", options: { bold: true, fill: { color: "0F172A" }, color: "FFFFFF" } },
+        { text: "Value", options: { bold: true, fill: { color: "0F172A" }, color: "FFFFFF" } },
+        { text: "Explanation", options: { bold: true, fill: { color: "0F172A" }, color: "FFFFFF" } },
       ],
-      ...p.dashboard.kpis.map((k) => [k.label, k.value, k.explanation]),
+      ...p.dashboard.kpis.map((k): pptxgen.TableRow => [
+        { text: k.label }, { text: k.value }, { text: k.explanation },
+      ]),
     ];
     s.addTable(rows, { x: 0.5, y: 1.3, w: 12, fontSize: 12, border: { pt: 1, color: "E2E8F0" } });
   }
