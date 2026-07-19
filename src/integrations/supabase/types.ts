@@ -20,6 +20,7 @@ export type Database = {
           dashboard: Json | null
           dataset_id: string
           executive_summary: string | null
+          forecasts: Json | null
           id: string
           insights: Json | null
           model: string | null
@@ -32,6 +33,7 @@ export type Database = {
           dashboard?: Json | null
           dataset_id: string
           executive_summary?: string | null
+          forecasts?: Json | null
           id?: string
           insights?: Json | null
           model?: string | null
@@ -44,6 +46,7 @@ export type Database = {
           dashboard?: Json | null
           dataset_id?: string
           executive_summary?: string | null
+          forecasts?: Json | null
           id?: string
           insights?: Json | null
           model?: string | null

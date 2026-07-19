@@ -65,6 +65,18 @@ export type Dashboard = z.infer<typeof DashboardSpec>;
 export type Insights = z.infer<typeof InsightsSpec>;
 export type Understanding = z.infer<typeof UnderstandingSpec>;
 
+export interface ForecastPoint { period: string; value: number; projected: boolean }
+export interface Forecast {
+  metric: string;
+  time_column: string;
+  method: string;
+  points: ForecastPoint[];
+  narrative: string;
+  trend: "up" | "down" | "flat";
+  change_pct: number;
+}
+export interface ForecastBundle { forecasts: Forecast[] }
+
 // ---------- Column profiling ----------
 function profileColumns(rows: Array<Record<string, unknown>>): ColumnMeta[] {
   if (!rows.length) return [];
@@ -244,6 +256,11 @@ export const analyzeDataset = createServerFn({ method: "POST" })
         InsightsSpec, HEAVY_MODEL
       );
 
+      const forecasts = computeForecasts(
+        ds.sample_rows as Array<Record<string, unknown>>,
+        understanding,
+      );
+
       const { error: insErr } = await context.supabase.from("analyses").insert({
         dataset_id: data.id,
         user_id: context.userId,
@@ -252,6 +269,7 @@ export const analyzeDataset = createServerFn({ method: "POST" })
         insights: (insights ? { insights: insights.insights, anomalies: insights.anomalies } : null) as unknown as never,
         recommendations: (insights?.recommendations ?? null) as unknown as never,
         executive_summary: insights?.executive_summary ?? null,
+        forecasts: ({ forecasts } as unknown as never),
         model: HEAVY_MODEL,
       });
       if (insErr) throw new Error(insErr.message);
@@ -264,3 +282,62 @@ export const analyzeDataset = createServerFn({ method: "POST" })
       throw e;
     }
   });
+
+// ---------- Forecasting (linear regression on time series) ----------
+function computeForecasts(
+  rows: Array<Record<string, unknown>>,
+  understanding: Understanding | null,
+): Forecast[] {
+  if (!understanding?.time_column || !understanding.metric_columns?.length) return [];
+  const timeCol = understanding.time_column;
+  const parsed = rows
+    .map((r) => ({ t: new Date(String(r[timeCol])).getTime(), r }))
+    .filter((x) => Number.isFinite(x.t))
+    .sort((a, b) => a.t - b.t);
+  if (parsed.length < 4) return [];
+
+  const out: Forecast[] = [];
+  for (const metric of understanding.metric_columns.slice(0, 4)) {
+    const pts = parsed
+      .map(({ t, r }) => ({ t, v: Number(r[metric]) }))
+      .filter((p) => Number.isFinite(p.v));
+    if (pts.length < 4) continue;
+
+    const n = pts.length;
+    const meanT = pts.reduce((a, p) => a + p.t, 0) / n;
+    const meanV = pts.reduce((a, p) => a + p.v, 0) / n;
+    const num = pts.reduce((a, p) => a + (p.t - meanT) * (p.v - meanV), 0);
+    const den = pts.reduce((a, p) => a + (p.t - meanT) ** 2, 0);
+    const slope = den === 0 ? 0 : num / den;
+    const intercept = meanV - slope * meanT;
+    const step = (pts[n - 1].t - pts[0].t) / Math.max(n - 1, 1);
+
+    const points: ForecastPoint[] = pts.map((p) => ({
+      period: new Date(p.t).toISOString().slice(0, 10),
+      value: Math.round(p.v * 1000) / 1000,
+      projected: false,
+    }));
+    for (let i = 1; i <= 6; i++) {
+      const t = pts[n - 1].t + step * i;
+      points.push({
+        period: new Date(t).toISOString().slice(0, 10),
+        value: Math.round((intercept + slope * t) * 1000) / 1000,
+        projected: true,
+      });
+    }
+
+    const first = pts[0].v, last = pts[n - 1].v;
+    const changePct = first === 0 ? 0 : ((last - first) / Math.abs(first)) * 100;
+    const trend: Forecast["trend"] = Math.abs(changePct) < 2 ? "flat" : changePct > 0 ? "up" : "down";
+    out.push({
+      metric,
+      time_column: timeCol,
+      method: "linear-regression",
+      points,
+      trend,
+      change_pct: Math.round(changePct * 10) / 10,
+      narrative: `${metric} has moved ${changePct >= 0 ? "+" : ""}${changePct.toFixed(1)}% across the observed period. A linear projection extrapolates the next 6 periods at the same rate. Treat projections as directional guidance, not commitments — real-world seasonality and shocks are not modeled.`,
+    });
+  }
+  return out;
+}
