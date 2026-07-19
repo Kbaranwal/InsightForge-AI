@@ -1,17 +1,24 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, Sparkles, Loader2, AlertCircle, TrendingUp, TrendingDown, Minus, Lightbulb, AlertTriangle, Target, FileText,
+  ArrowLeft, Sparkles, Loader2, AlertCircle, TrendingUp, TrendingDown, Minus, Lightbulb,
+  AlertTriangle, Target, FileText, Download, LineChart as LineChartIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+} from "recharts";
 import { ChartRenderer } from "@/components/chart-renderer";
 import { ChatPanel } from "@/components/chat-panel";
 import { getDataset, analyzeDataset } from "@/lib/datasets.functions";
-import type { Dashboard, Insights, Understanding } from "@/lib/datasets.functions";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Dashboard, Insights, Understanding, Forecast } from "@/lib/datasets.functions";
+import { exportCSV, exportExcel, exportPDF, exportPPTX, exportDOCX, type ExportPayload } from "@/lib/exports";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/datasets/$id")({
