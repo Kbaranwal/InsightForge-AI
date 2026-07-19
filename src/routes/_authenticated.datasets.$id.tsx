@@ -166,6 +166,7 @@ function DatasetDetail() {
           <TabsList>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
+            <TabsTrigger value="forecasts">Forecasts</TabsTrigger>
             <TabsTrigger value="chat">Chat</TabsTrigger>
             <TabsTrigger value="data">Data</TabsTrigger>
           </TabsList>
