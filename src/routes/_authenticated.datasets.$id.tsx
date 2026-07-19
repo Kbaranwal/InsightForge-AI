@@ -74,6 +74,29 @@ function DatasetDetail() {
   const insights = analysis?.insights as { insights: Insights["insights"]; anomalies: Insights["anomalies"] } | null;
   const recommendations = analysis?.recommendations as Insights["recommendations"] | null;
   const understanding = analysis?.understanding as Understanding | null;
+  const forecasts = ((analysis?.forecasts as { forecasts?: Forecast[] } | null)?.forecasts ?? []) as Forecast[];
+
+  function runExport(fmt: "csv" | "xlsx" | "pdf" | "pptx" | "docx") {
+    try {
+      const payload: ExportPayload = {
+        datasetName: dataset.name,
+        rowCount: dataset.row_count,
+        columnCount: dataset.column_count,
+        dashboard, insights, recommendations, understanding, forecasts,
+        executive_summary: analysis?.executive_summary ?? null,
+        columns: dataset.columns as Array<{ name: string; type: string }>,
+        rows: dataset.sample_rows as Array<Record<string, unknown>>,
+      };
+      if (fmt === "csv") exportCSV(payload);
+      else if (fmt === "xlsx") exportExcel(payload);
+      else if (fmt === "pdf") exportPDF(payload);
+      else if (fmt === "pptx") exportPPTX(payload);
+      else if (fmt === "docx") void exportDOCX(payload);
+      toast.success(`Exported as ${fmt.toUpperCase()}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    }
+  }
 
   return (
     <div className="container-page py-6 md:py-8">
@@ -89,9 +112,30 @@ function DatasetDetail() {
             {understanding?.domain && <> · <span className="text-accent">{understanding.domain}</span></>}
           </p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2" onClick={() => rerun.mutate()} disabled={rerun.isPending}>
-          <Sparkles className="size-4" /> {rerun.isPending ? "Restarting…" : "Re-run analysis"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {dataset.status === "ready" && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Download className="size-4" /> Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Full report</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => runExport("pdf")}>PDF report</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => runExport("pptx")}>PowerPoint (.pptx)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => runExport("docx")}>Word (.docx)</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Data</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => runExport("xlsx")}>Excel (.xlsx)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => runExport("csv")}>CSV</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => rerun.mutate()} disabled={rerun.isPending}>
+            <Sparkles className="size-4" /> {rerun.isPending ? "Restarting…" : "Re-run analysis"}
+          </Button>
+        </div>
       </div>
 
       {dataset.status === "analyzing" && (
