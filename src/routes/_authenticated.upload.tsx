@@ -116,7 +116,7 @@ function UploadPage() {
       </div>
 
       <motion.div
-        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+        onDragOver={(e: React.DragEvent) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={onDrop}
         onClick={() => !busy && inputRef.current?.click()}
