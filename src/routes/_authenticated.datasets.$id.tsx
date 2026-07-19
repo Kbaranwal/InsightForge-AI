@@ -270,6 +270,65 @@ function DatasetDetail() {
             )}
           </TabsContent>
 
+          <TabsContent value="forecasts" className="mt-6 space-y-4">
+            {forecasts.length === 0 ? (
+              <div className="rounded-xl border border-border bg-card p-10 text-center">
+                <LineChartIcon className="size-8 text-muted-foreground mx-auto mb-3" />
+                <div className="font-medium">No forecasts available</div>
+                <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+                  Forecasts require a detected time column and at least 4 valid points per numeric metric.
+                  Re-run the analysis after adding time-series columns to see projections.
+                </p>
+              </div>
+            ) : (
+              forecasts.map((f, i) => {
+                const firstProjectedIdx = f.points.findIndex((p) => p.projected);
+                const splitLabel = firstProjectedIdx > 0 ? f.points[firstProjectedIdx].period : null;
+                return (
+                  <motion.div key={f.metric} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="rounded-xl border border-border bg-card p-5">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <div className="font-semibold flex items-center gap-2">
+                          <LineChartIcon className="size-4 text-accent" /> {f.metric}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          over <span className="font-mono">{f.time_column}</span> · {f.method}
+                        </div>
+                      </div>
+                      <div className={`text-xs px-2 py-1 rounded-full border ${
+                        f.trend === "up" ? "border-success/40 text-success bg-success/10" :
+                        f.trend === "down" ? "border-destructive/40 text-destructive bg-destructive/10" :
+                        "border-border text-muted-foreground"
+                      }`}>
+                        {f.trend === "up" ? <TrendingUp className="inline size-3 mr-1" /> :
+                         f.trend === "down" ? <TrendingDown className="inline size-3 mr-1" /> :
+                         <Minus className="inline size-3 mr-1" />}
+                        {f.change_pct >= 0 ? "+" : ""}{f.change_pct}%
+                      </div>
+                    </div>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={f.points}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="period" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                          <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                          <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                          {splitLabel && <ReferenceLine x={splitLabel} stroke="hsl(var(--accent))" strokeDasharray="4 4" label={{ value: "forecast", fontSize: 10, fill: "hsl(var(--accent))" }} />}
+                          <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
+                      {f.narrative}
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </TabsContent>
+
           <TabsContent value="chat" className="mt-6">
             <ChatPanel datasetId={id} datasetName={dataset.name} />
           </TabsContent>
