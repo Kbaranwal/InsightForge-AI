@@ -65,6 +65,18 @@ export type Dashboard = z.infer<typeof DashboardSpec>;
 export type Insights = z.infer<typeof InsightsSpec>;
 export type Understanding = z.infer<typeof UnderstandingSpec>;
 
+export interface ForecastPoint { period: string; value: number; projected: boolean }
+export interface Forecast {
+  metric: string;
+  time_column: string;
+  method: string;
+  points: ForecastPoint[];
+  narrative: string;
+  trend: "up" | "down" | "flat";
+  change_pct: number;
+}
+export interface ForecastBundle { forecasts: Forecast[] }
+
 // ---------- Column profiling ----------
 function profileColumns(rows: Array<Record<string, unknown>>): ColumnMeta[] {
   if (!rows.length) return [];
