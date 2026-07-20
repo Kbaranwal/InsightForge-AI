@@ -337,6 +337,57 @@ function DatasetDetail() {
             )}
           </TabsContent>
 
+          <TabsContent value="report" className="mt-6">
+            {!report ? (
+              <div className="rounded-xl border border-border bg-card p-10 text-center">
+                <BookOpen className="size-8 text-muted-foreground mx-auto mb-3" />
+                <div className="font-medium">No narrative report yet</div>
+                <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+                  The Report Generation agent writes a full executive-grade narrative report from your analysis. Rate-limited to 10 per hour.
+                </p>
+                <Button size="sm" className="mt-4 gap-2 btn-shine" onClick={() => reportMut.mutate()} disabled={reportMut.isPending}>
+                  {reportMut.isPending ? <Loader2 className="size-4 animate-spin" /> : <BookOpen className="size-4" />}
+                  {reportMut.isPending ? "Generating…" : "Generate report"}
+                </Button>
+              </div>
+            ) : (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl border border-border bg-card p-6 md:p-10 space-y-6 max-w-4xl mx-auto">
+                <div className="flex items-start justify-between gap-4 border-b border-border pb-5">
+                  <div className="min-w-0">
+                    <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{report.title}</h2>
+                    <p className="text-sm text-muted-foreground mt-1">{report.subtitle}</p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button size="sm" variant="outline" className="gap-2" onClick={() => exportReportPDF(dataset.name, report)}>
+                      <Download className="size-4" /> PDF
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-2" onClick={() => reportMut.mutate()} disabled={reportMut.isPending}>
+                      <Sparkles className="size-4" /> {reportMut.isPending ? "Regenerating…" : "Regenerate"}
+                    </Button>
+                  </div>
+                </div>
+                {report.sections.map((s, i) => (
+                  <section key={i} className="space-y-2">
+                    <h3 className="text-lg font-semibold">{s.heading}</h3>
+                    <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-line">{s.body}</div>
+                    {s.bullets && s.bullets.length > 0 && (
+                      <ul className="list-disc pl-5 space-y-1 text-sm text-foreground/90 mt-2">
+                        {s.bullets.map((b, j) => <li key={j}>{b}</li>)}
+                      </ul>
+                    )}
+                  </section>
+                ))}
+                <div className="border-t border-border pt-5">
+                  <h3 className="text-lg font-semibold mb-2">Conclusion</h3>
+                  <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-line">{report.conclusion}</div>
+                </div>
+              </motion.div>
+            )}
+          </TabsContent>
+
+
+
           <TabsContent value="chat" className="mt-6">
             <ChatPanel datasetId={id} datasetName={dataset.name} />
           </TabsContent>
