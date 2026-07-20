@@ -189,12 +189,16 @@ export const deleteDataset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => z.object({ id: z.string().uuid() }).parse(v))
   .handler(async ({ data, context }) => {
-    const { data: ds } = await context.supabase.from("datasets").select("storage_path").eq("id", data.id).single();
+    const { data: ds } = await context.supabase.from("datasets").select("storage_path, name").eq("id", data.id).single();
     if (ds?.storage_path) {
       await context.supabase.storage.from("datasets").remove([ds.storage_path]);
     }
     const { error } = await context.supabase.from("datasets").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    await context.supabase.from("audit_logs").insert({
+      user_id: context.userId, action: "dataset.delete", resource_type: "dataset", resource_id: data.id,
+      metadata: { name: ds?.name } as unknown as never,
+    });
     return { ok: true };
   });
 
