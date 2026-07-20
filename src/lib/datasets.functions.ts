@@ -226,10 +226,16 @@ export const analyzeDataset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => z.object({ id: z.string().uuid() }).parse(v))
   .handler(async ({ data, context }) => {
+    await checkRateLimit(context.supabase as never, context.userId, "analysis.run", 20);
+
     const { data: ds, error } = await context.supabase.from("datasets").select("*").eq("id", data.id).single();
     if (error || !ds) throw new Error(error?.message ?? "Dataset not found");
 
     await context.supabase.from("datasets").update({ status: "analyzing" }).eq("id", data.id);
+    await context.supabase.from("audit_logs").insert({
+      user_id: context.userId, action: "analysis.run", resource_type: "dataset", resource_id: data.id,
+      metadata: { model: HEAVY_MODEL } as unknown as never,
+    });
 
     const gateway = createGateway();
     const dsCtx = buildDatasetContext(ds as never);
