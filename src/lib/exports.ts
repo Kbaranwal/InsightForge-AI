@@ -7,7 +7,7 @@ import {
   Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell,
   WidthType, AlignmentType, BorderStyle,
 } from "docx";
-import type { Dashboard, Insights, Understanding, Forecast } from "./datasets.functions";
+import type { Dashboard, Insights, Understanding, Forecast, Report } from "./datasets.functions";
 
 export interface ExportPayload {
   datasetName: string;
@@ -335,3 +335,55 @@ export async function exportDOCX(p: ExportPayload) {
   const blob = await Packer.toBlob(doc);
   download(blob, fname(p.datasetName, "docx"));
 }
+
+// ---------- Narrative Report PDF ----------
+export function exportReportPDF(datasetName: string, report: Report) {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const margin = 56;
+  let y = margin;
+
+  const ensure = (need: number) => {
+    if (y + need > H - margin) { doc.addPage(); y = margin; }
+  };
+  const write = (text: string, size: number, weight: "normal" | "bold" = "normal", color: [number, number, number] = [20, 20, 20]) => {
+    doc.setFont("helvetica", weight);
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(text, W - margin * 2) as string[];
+    for (const line of lines) {
+      ensure(size + 6);
+      doc.text(line, margin, y);
+      y += size + 4;
+    }
+  };
+
+  write(report.title, 22, "bold");
+  write(report.subtitle, 12, "normal", [110, 110, 110]);
+  y += 6;
+  doc.setDrawColor(220); doc.line(margin, y, W - margin, y); y += 18;
+
+  for (const section of report.sections) {
+    ensure(40);
+    write(section.heading, 15, "bold", [15, 15, 15]);
+    y += 4;
+    write(section.body, 11);
+    if (section.bullets?.length) {
+      y += 4;
+      for (const b of section.bullets) {
+        write(`•  ${b}`, 11);
+      }
+    }
+    y += 10;
+  }
+
+  ensure(60);
+  doc.setDrawColor(220); doc.line(margin, y, W - margin, y); y += 14;
+  write("Conclusion", 15, "bold");
+  y += 4;
+  write(report.conclusion, 11);
+
+  doc.save(fname(`${datasetName}_report`, "pdf"));
+}
+

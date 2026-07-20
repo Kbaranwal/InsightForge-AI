@@ -25,6 +25,7 @@ export type Database = {
           insights: Json | null
           model: string | null
           recommendations: Json | null
+          report: Json | null
           understanding: Json | null
           user_id: string
         }
@@ -38,6 +39,7 @@ export type Database = {
           insights?: Json | null
           model?: string | null
           recommendations?: Json | null
+          report?: Json | null
           understanding?: Json | null
           user_id: string
         }
@@ -51,6 +53,7 @@ export type Database = {
           insights?: Json | null
           model?: string | null
           recommendations?: Json | null
+          report?: Json | null
           understanding?: Json | null
           user_id?: string
         }

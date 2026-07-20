@@ -60,6 +60,17 @@ const UnderstandingSpec = z.object({
   data_quality_notes: z.array(z.string()),
   pii_columns: z.array(z.string()),
 });
+const ReportSpec = z.object({
+  title: z.string(),
+  subtitle: z.string(),
+  sections: z.array(z.object({
+    heading: z.string(),
+    body: z.string(),
+    bullets: z.array(z.string()).nullable(),
+  })),
+  conclusion: z.string(),
+});
+export type Report = z.infer<typeof ReportSpec>;
 
 export type Dashboard = z.infer<typeof DashboardSpec>;
 export type Insights = z.infer<typeof InsightsSpec>;
@@ -178,12 +189,16 @@ export const deleteDataset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => z.object({ id: z.string().uuid() }).parse(v))
   .handler(async ({ data, context }) => {
-    const { data: ds } = await context.supabase.from("datasets").select("storage_path").eq("id", data.id).single();
+    const { data: ds } = await context.supabase.from("datasets").select("storage_path, name").eq("id", data.id).single();
     if (ds?.storage_path) {
       await context.supabase.storage.from("datasets").remove([ds.storage_path]);
     }
     const { error } = await context.supabase.from("datasets").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    await context.supabase.from("audit_logs").insert({
+      user_id: context.userId, action: "dataset.delete", resource_type: "dataset", resource_id: data.id,
+      metadata: { name: ds?.name } as unknown as never,
+    });
     return { ok: true };
   });
 
@@ -215,10 +230,16 @@ export const analyzeDataset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => z.object({ id: z.string().uuid() }).parse(v))
   .handler(async ({ data, context }) => {
+    await checkRateLimit(context.supabase as never, context.userId, "analysis.run", 20);
+
     const { data: ds, error } = await context.supabase.from("datasets").select("*").eq("id", data.id).single();
     if (error || !ds) throw new Error(error?.message ?? "Dataset not found");
 
     await context.supabase.from("datasets").update({ status: "analyzing" }).eq("id", data.id);
+    await context.supabase.from("audit_logs").insert({
+      user_id: context.userId, action: "analysis.run", resource_type: "dataset", resource_id: data.id,
+      metadata: { model: HEAVY_MODEL } as unknown as never,
+    });
 
     const gateway = createGateway();
     const dsCtx = buildDatasetContext(ds as never);
@@ -341,3 +362,108 @@ function computeForecasts(
   }
   return out;
 }
+
+// ---------- Rate limiting (ad-hoc, audit_logs-backed) ----------
+// Simple per-user hourly window; not distributed, best-effort.
+async function checkRateLimit(
+  supabase: { from: (t: string) => { select: (c: string, o?: unknown) => { eq: (...a: unknown[]) => { gte: (...a: unknown[]) => Promise<{ count: number | null }> } } } },
+  userId: string,
+  action: string,
+  perHour: number,
+) {
+  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  // deno-lint-ignore no-explicit-any
+  const { count } = await (supabase as any)
+    .from("audit_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("action", action)
+    .gte("created_at", since);
+  if ((count ?? 0) >= perHour) {
+    throw new Error(`Rate limit reached (${perHour}/hour for ${action}). Try again later.`);
+  }
+}
+
+// ---------- Report Generation Agent ----------
+export const generateReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((v: unknown) => z.object({ id: z.string().uuid() }).parse(v))
+  .handler(async ({ data, context }) => {
+    await checkRateLimit(context.supabase as never, context.userId, "report.generate", 10);
+
+    const { data: ds, error } = await context.supabase.from("datasets").select("*").eq("id", data.id).single();
+    if (error || !ds) throw new Error(error?.message ?? "Dataset not found");
+    const { data: analysis } = await context.supabase
+      .from("analyses").select("*").eq("dataset_id", data.id)
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (!analysis) throw new Error("Run the analysis first before generating a report.");
+
+    const gateway = createGateway();
+    const dsCtx = buildDatasetContext(ds as never);
+
+    const prompt = `You are a senior data consultant writing an executive-grade narrative report about a dataset.
+Base every statement strictly on the analysis and dataset provided — do not invent facts.
+
+${dsCtx}
+
+UNDERSTANDING:
+${JSON.stringify(analysis.understanding)}
+
+DASHBOARD:
+${JSON.stringify(analysis.dashboard)}
+
+INSIGHTS + ANOMALIES + RECOMMENDATIONS:
+${JSON.stringify(analysis.insights)}
+${JSON.stringify(analysis.recommendations)}
+
+FORECASTS:
+${JSON.stringify(analysis.forecasts)}
+
+Write a full report with:
+- title: concise, business-oriented
+- subtitle: one-line framing
+- sections: 5-8 sections, each with a clear heading (e.g. Executive Overview, Data Profile, Key Findings, Anomalies & Risks, Forecasts & Outlook, Recommendations, Methodology, Limitations). Each section body should be 2-4 well-written paragraphs. Use bullets only where a list is clearly the right format (recommendations, risks, methodology steps). Set bullets to null when not used.
+- conclusion: 1-2 paragraphs synthesizing the takeaway and next steps.
+Tone: crisp, confident, honest about uncertainty. No filler.`;
+
+    let report: Report | null = null;
+    try {
+      const { object } = await generateObject({
+        model: gateway(HEAVY_MODEL),
+        schema: ReportSpec as never,
+        prompt,
+        temperature: 0.3,
+      });
+      report = object as Report;
+    } catch (e) {
+      if (NoObjectGeneratedError.isInstance(e)) {
+        try { report = ReportSpec.parse(JSON.parse((e as { text?: string }).text ?? "")); } catch { report = null; }
+      } else throw e;
+    }
+    if (!report) throw new Error("Report generation failed. Please try again.");
+
+    const { error: upErr } = await context.supabase
+      .from("analyses").update({ report: report as unknown as never }).eq("id", analysis.id);
+    if (upErr) throw new Error(upErr.message);
+
+    await context.supabase.from("audit_logs").insert({
+      user_id: context.userId, action: "report.generate", resource_type: "dataset", resource_id: data.id,
+      metadata: { sections: report.sections.length } as unknown as never,
+    });
+
+    return { report };
+  });
+
+// ---------- Audit log listing ----------
+export const listAuditLogs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("audit_logs")
+      .select("id, action, resource_type, resource_id, metadata, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
