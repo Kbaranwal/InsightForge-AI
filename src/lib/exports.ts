@@ -7,7 +7,7 @@ import {
   Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell,
   WidthType, AlignmentType, BorderStyle,
 } from "docx";
-import type { Dashboard, Insights, Understanding, Forecast } from "./datasets.functions";
+import type { Dashboard, Insights, Understanding, Forecast, Report } from "./datasets.functions";
 
 export interface ExportPayload {
   datasetName: string;
