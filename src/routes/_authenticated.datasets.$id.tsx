@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   ArrowLeft, Sparkles, Loader2, AlertCircle, TrendingUp, TrendingDown, Minus, Lightbulb,
-  AlertTriangle, Target, FileText, Download, LineChart as LineChartIcon,
+  AlertTriangle, Target, FileText, Download, LineChart as LineChartIcon, BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,9 +16,9 @@ import {
 } from "recharts";
 import { ChartRenderer } from "@/components/chart-renderer";
 import { ChatPanel } from "@/components/chat-panel";
-import { getDataset, analyzeDataset } from "@/lib/datasets.functions";
-import type { Dashboard, Insights, Understanding, Forecast } from "@/lib/datasets.functions";
-import { exportCSV, exportExcel, exportPDF, exportPPTX, exportDOCX, type ExportPayload } from "@/lib/exports";
+import { getDataset, analyzeDataset, generateReport } from "@/lib/datasets.functions";
+import type { Dashboard, Insights, Understanding, Forecast, Report } from "@/lib/datasets.functions";
+import { exportCSV, exportExcel, exportPDF, exportPPTX, exportDOCX, exportReportPDF, type ExportPayload } from "@/lib/exports";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/datasets/$id")({
