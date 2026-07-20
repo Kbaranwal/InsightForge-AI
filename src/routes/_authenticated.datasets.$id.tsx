@@ -75,6 +75,13 @@ function DatasetDetail() {
   const recommendations = analysis?.recommendations as Insights["recommendations"] | null;
   const understanding = analysis?.understanding as Understanding | null;
   const forecasts = ((analysis?.forecasts as { forecasts?: Forecast[] } | null)?.forecasts ?? []) as Forecast[];
+  const report = (analysis?.report as Report | null) ?? null;
+
+  const reportMut = useMutation({
+    mutationFn: () => generateReport({ data: { id } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["dataset", id] }); toast.success("Report generated"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
 
   function runExport(fmt: "csv" | "xlsx" | "pdf" | "pptx" | "docx") {
     try {
