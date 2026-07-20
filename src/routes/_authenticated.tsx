@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BarChart3, LayoutDashboard, Upload, Settings, LogOut, ChevronRight, Sparkles, Menu, X,
+  BarChart3, LayoutDashboard, Upload, Settings, LogOut, ChevronRight, Sparkles, Menu, X, Activity,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
