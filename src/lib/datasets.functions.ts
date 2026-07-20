@@ -60,6 +60,17 @@ const UnderstandingSpec = z.object({
   data_quality_notes: z.array(z.string()),
   pii_columns: z.array(z.string()),
 });
+const ReportSpec = z.object({
+  title: z.string(),
+  subtitle: z.string(),
+  sections: z.array(z.object({
+    heading: z.string(),
+    body: z.string(),
+    bullets: z.array(z.string()).nullable(),
+  })),
+  conclusion: z.string(),
+});
+export type Report = z.infer<typeof ReportSpec>;
 
 export type Dashboard = z.infer<typeof DashboardSpec>;
 export type Insights = z.infer<typeof InsightsSpec>;
