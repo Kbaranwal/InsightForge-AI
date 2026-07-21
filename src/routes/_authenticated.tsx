@@ -7,6 +7,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { User } from "@supabase/supabase-js";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -87,7 +88,11 @@ function AuthenticatedLayout() {
             );
           })}
         </nav>
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="p-3 border-t border-sidebar-border space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs text-muted-foreground">Appearance</span>
+            <ThemeToggle />
+          </div>
           <div className="flex items-center gap-3 px-2 py-2">
             <div className="size-8 rounded-full flex items-center justify-center text-xs font-semibold text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
               {initials}
