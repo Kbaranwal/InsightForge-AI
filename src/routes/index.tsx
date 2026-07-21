@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowRight, BarChart3, Bot, Sparkles, Upload, Zap, ShieldCheck, LineChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -40,6 +41,7 @@ function Landing() {
           InsightIQ
         </Link>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Link to="/auth">
             <Button variant="ghost" size="sm">Sign in</Button>
           </Link>
