@@ -94,11 +94,16 @@ const tooltipStyle = {
   contentStyle: {
     background: "var(--color-popover)",
     border: "1px solid var(--color-border)",
-    borderRadius: "8px",
+    borderRadius: "10px",
     fontSize: "12px",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+    color: "var(--color-foreground)",
   },
-  labelStyle: { color: "var(--color-foreground)", fontWeight: 500 },
+  labelStyle: { color: "var(--color-foreground)", fontWeight: 600 },
+  itemStyle: { color: "var(--color-foreground)" },
 };
+
+const CHART_H = 320;
 
 export function ChartRenderer({ spec, rows }: { spec: ChartSpec; rows: Array<Record<string, unknown>> }) {
   const computed = useMemo(() => aggregate(rows, spec), [rows, spec]);
@@ -106,13 +111,13 @@ export function ChartRenderer({ spec, rows }: { spec: ChartSpec; rows: Array<Rec
   if (spec.type === "table") {
     const cols = [spec.x, ...spec.y].filter(Boolean) as string[];
     return (
-      <div className="overflow-auto max-h-64 rounded-md border border-border">
+      <div className="overflow-auto max-h-80 rounded-md border border-border">
         <table className="w-full text-xs">
-          <thead className="bg-muted/40 sticky top-0"><tr>{cols.map((c) => <th key={c} className="text-left px-2 py-1.5 font-medium">{c}</th>)}</tr></thead>
+          <thead className="bg-muted/60 sticky top-0"><tr>{cols.map((c) => <th key={c} className="text-left px-2 py-2 font-semibold text-foreground">{c}</th>)}</tr></thead>
           <tbody>
             {rows.slice(0, 50).map((r, i) => (
-              <tr key={i} className="border-t border-border/50">
-                {cols.map((c) => <td key={c} className="px-2 py-1 text-muted-foreground">{String(r[c] ?? "")}</td>)}
+              <tr key={i} className="border-t border-border/50 hover:bg-muted/30">
+                {cols.map((c) => <td key={c} className="px-2 py-1.5 text-foreground/90">{String(r[c] ?? "")}</td>)}
               </tr>
             ))}
           </tbody>
@@ -122,7 +127,7 @@ export function ChartRenderer({ spec, rows }: { spec: ChartSpec; rows: Array<Rec
   }
 
   if (!computed.rows.length) {
-    return <div className="h-56 flex items-center justify-center text-xs text-muted-foreground">Not enough data to render this chart.</div>;
+    return <div className="h-64 flex items-center justify-center text-xs text-muted-foreground">Not enough data to render this chart.</div>;
   }
   const { rows: data, series } = computed;
 
@@ -130,13 +135,13 @@ export function ChartRenderer({ spec, rows }: { spec: ChartSpec; rows: Array<Rec
     const y0 = spec.y[0];
     const pieData = data.map((d) => ({ name: String(d[spec.x!]), value: coerceNum(d[y0]) ?? 0 })).slice(0, 6);
     return (
-      <ResponsiveContainer width="100%" height={240}>
+      <ResponsiveContainer width="100%" height={CHART_H}>
         <PieChart>
-          <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={85} paddingAngle={2}>
+          <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={110} paddingAngle={2} stroke="var(--color-background)" strokeWidth={2}>
             {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
           </Pie>
           <Tooltip {...tooltipStyle} />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Legend wrapperStyle={{ fontSize: 12, color: "var(--color-foreground)" }} />
         </PieChart>
       </ResponsiveContainer>
     );
@@ -145,11 +150,11 @@ export function ChartRenderer({ spec, rows }: { spec: ChartSpec; rows: Array<Rec
     const [xk, yk] = spec.y.length >= 2 ? spec.y : [spec.x!, spec.y[0]];
     const scatter = rows.map((r) => ({ x: coerceNum(r[xk]), y: coerceNum(r[yk]) })).filter((p) => p.x !== null && p.y !== null);
     return (
-      <ResponsiveContainer width="100%" height={240}>
-        <ScatterChart>
-          <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
-          <XAxis dataKey="x" name={xk} tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }} />
-          <YAxis dataKey="y" name={yk} tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }} />
+      <ResponsiveContainer width="100%" height={CHART_H}>
+        <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+          <CartesianGrid stroke="var(--color-border)" strokeOpacity={0.6} strokeDasharray="3 3" />
+          <XAxis dataKey="x" name={xk} tick={{ fontSize: 12, fill: "var(--color-foreground)" }} stroke="var(--color-muted-foreground)" />
+          <YAxis dataKey="y" name={yk} tick={{ fontSize: 12, fill: "var(--color-foreground)" }} stroke="var(--color-muted-foreground)" />
           <Tooltip {...tooltipStyle} cursor={{ strokeDasharray: "3 3" }} />
           <Scatter data={scatter} fill="var(--color-chart-1)" />
         </ScatterChart>
@@ -159,44 +164,44 @@ export function ChartRenderer({ spec, rows }: { spec: ChartSpec; rows: Array<Rec
 
   const commonProps = {
     data,
-    margin: { top: 4, right: 8, bottom: 0, left: -8 },
+    margin: { top: 8, right: 16, bottom: 4, left: 0 },
   } as const;
   const axes = (
     <>
-      <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" vertical={false} />
-      <XAxis dataKey={spec.x!} tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
-      <YAxis tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} width={40} />
-      <Tooltip {...tooltipStyle} />
-      {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
+      <CartesianGrid stroke="var(--color-border)" strokeOpacity={0.7} strokeDasharray="3 3" vertical={false} />
+      <XAxis dataKey={spec.x!} tick={{ fontSize: 12, fill: "var(--color-foreground)" }} tickLine={false} axisLine={{ stroke: "var(--color-border)" }} />
+      <YAxis tick={{ fontSize: 12, fill: "var(--color-foreground)" }} tickLine={false} axisLine={false} width={48} />
+      <Tooltip {...tooltipStyle} cursor={{ fill: "var(--color-muted)", fillOpacity: 0.3 }} />
+      {series.length > 1 && <Legend wrapperStyle={{ fontSize: 12, color: "var(--color-foreground)" }} />}
     </>
   );
 
   if (spec.type === "bar") {
     return (
-      <ResponsiveContainer width="100%" height={240}>
+      <ResponsiveContainer width="100%" height={CHART_H}>
         <BarChart {...commonProps}>
           {axes}
-          {series.map((s, i) => <Bar key={s} dataKey={s} fill={COLORS[i % COLORS.length]} radius={[6, 6, 0, 0]} />)}
+          {series.map((s, i) => <Bar key={s} dataKey={s} fill={COLORS[i % COLORS.length]} radius={[6, 6, 0, 0]} maxBarSize={48} />)}
         </BarChart>
       </ResponsiveContainer>
     );
   }
   if (spec.type === "area") {
     return (
-      <ResponsiveContainer width="100%" height={240}>
+      <ResponsiveContainer width="100%" height={CHART_H}>
         <AreaChart {...commonProps}>
           <defs>
             {series.map((s, i) => (
               <linearGradient key={s} id={`grad-${spec.id}-${i}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.6} />
-                <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0} />
+                <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.75} />
+                <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.05} />
               </linearGradient>
             ))}
           </defs>
           {axes}
           {series.map((s, i) => (
             <Area key={s} type="monotone" dataKey={s} stroke={COLORS[i % COLORS.length]}
-                  strokeWidth={2} fill={`url(#grad-${spec.id}-${i})`} />
+                  strokeWidth={2.5} fill={`url(#grad-${spec.id}-${i})`} />
           ))}
         </AreaChart>
       </ResponsiveContainer>
@@ -204,14 +209,15 @@ export function ChartRenderer({ spec, rows }: { spec: ChartSpec; rows: Array<Rec
   }
   // line default
   return (
-    <ResponsiveContainer width="100%" height={240}>
+    <ResponsiveContainer width="100%" height={CHART_H}>
       <LineChart {...commonProps}>
         {axes}
         {series.map((s, i) => (
           <Line key={s} type="monotone" dataKey={s} stroke={COLORS[i % COLORS.length]}
-                strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
         ))}
       </LineChart>
     </ResponsiveContainer>
   );
 }
+
