@@ -130,7 +130,7 @@ const createInput = z.object({
   fileSize: z.number().int().nonnegative(),
   storagePath: z.string().nullable(),
   rowCount: z.number().int().nonnegative(),
-  sampleRows: z.array(z.record(z.unknown())).max(500),
+  sampleRows: z.array(z.record(z.string(), z.unknown())).max(500),
 });
 
 export const createDataset = createServerFn({ method: "POST" })
