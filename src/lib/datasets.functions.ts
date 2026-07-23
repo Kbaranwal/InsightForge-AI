@@ -291,10 +291,12 @@ export const analyzeDataset = createServerFn({ method: "POST" })
       if (!understanding) understanding = fallbackUnderstanding(ds as never);
 
       let dashboard = await guarded(
-        `You are a senior data visualization expert. Given the dataset context and its analysis, design an executive dashboard.\n\n${dsCtx}\n\nANALYSIS:\n${JSON.stringify(understanding)}\n\nRules:\n- Return 3-6 KPI cards with clear labels, computed values (as strings, formatted with units/%/$/commas when appropriate). Use the sample rows and stats — never fabricate numbers not derivable from the data.\n- Return 3-6 charts. Choose types wisely: line/area for time series, bar for comparisons across categories, pie for share breakdowns (max 6 slices), scatter for correlations, table for reference lists.\n- For each chart set x (the field on x-axis), y (fields to plot; usually 1), optional groupBy (nullable), and aggregation (sum/avg/count/min/max/none).\n- Every chart and KPI MUST have a plain-English explanation.\n- Only use columns that exist. Prefer a time column for at least one chart if present.\n- Title: a concise dashboard title.`,
+        `You are a senior data visualization expert. Given the dataset context and its analysis, design an executive dashboard.\n\n${dsCtx}\n\nANALYSIS:\n${JSON.stringify(understanding)}\n\nSTRICT CHART SELECTION RULES — follow exactly:\n1. Only reference column names that exist in COLUMNS above (case-sensitive). Never invent a column.\n2. Chart type selection by schema:\n   - line/area: x MUST be the time_column (or a numeric ordered column); y MUST be numeric metrics. Use ONLY if a time column exists.\n   - bar: x MUST be a categorical/dimension column with 2-15 unique values; y MUST be numeric OR use aggregation="count".\n   - pie: x MUST be a categorical column with 2-6 unique values (never more); use aggregation="count" or a single numeric y with aggregation="sum". Skip pie if the top category is >85% or if there are >6 categories.\n   - scatter: x AND y[0] MUST both be numeric metric columns and DIFFERENT from each other. Use only if there are ≥2 numeric columns.\n   - table: use sparingly, only for reference lists where aggregation isn't meaningful.\n3. Never emit two charts with the same (type, x, y) tuple. Diversify: prefer coverage across time, comparison, distribution, and correlation.\n4. Aggregation MUST match: numeric y → sum/avg/min/max; no numeric y (count of rows) → count; scatter/table → none.\n5. If time_column exists → include at least one line/area chart on it.\n6. If dimension_columns exist AND a metric exists → include at least one bar chart of metric by top dimension.\n7. Return 4-6 charts total. Every chart AND KPI needs a plain-English explanation grounded in real column stats.\n8. KPIs: 3-6 cards. Values are strings formatted with units/%/$/commas. Never fabricate numbers not derivable from stats/sample.\n\nReturn ONLY valid JSON matching the schema.`,
         DashboardSpec, HEAVY_MODEL
       );
       if (!dashboard) dashboard = fallbackDashboard(ds as never, understanding);
+      dashboard = validateAndEnrichCharts(dashboard, ds as never, understanding);
+
 
       let insights = await guarded(
         `You are a senior data scientist. Study the dataset and produce insights, anomalies, and recommendations.\n\n${dsCtx}\n\nANALYSIS:\n${JSON.stringify(understanding)}\n\nRules:\n- 3-6 insights: title + specific detail + evidence (which columns / values support it).\n- 0-4 anomalies: outliers, quality issues, or surprising values.\n- 3-5 recommendations: concrete next actions with an impact rating.\n- executive_summary: 2-3 tight paragraphs an executive can read in 30 seconds. Never invent facts.`,
@@ -357,7 +359,90 @@ function fmtNum(n: number): string {
   return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(2);
 }
 
+// Post-process AI dashboard: drop invalid charts, coerce mismatched types, dedupe, top-up.
+function validateAndEnrichCharts(
+  dashboard: Dashboard,
+  ds: { name: string; row_count: number; columns: unknown; sample_rows: unknown },
+  u: Understanding,
+): Dashboard {
+  const cols = ds.columns as ColumnMeta[];
+  const byName = new Map(cols.map((c) => [c.name, c]));
+  const sample = (ds.sample_rows as Array<Record<string, unknown>>) ?? [];
+  const uniqueValuesInSample = (name: string) => {
+    const s = new Set<string>();
+    for (const r of sample) {
+      const v = r?.[name];
+      if (v === null || v === undefined || v === "") continue;
+      s.add(String(v));
+      if (s.size > 50) break;
+    }
+    return s.size;
+  };
+
+  const seen = new Set<string>();
+  const cleaned: Dashboard["charts"] = [];
+  for (const c of dashboard.charts ?? []) {
+    const xCol = c.x ? byName.get(c.x) : null;
+    const yCols = (c.y ?? []).filter((n) => byName.has(n));
+    if (c.x && !xCol) continue; // x refers to missing column
+    if (yCols.length === 0 && c.aggregation !== "count" && c.type !== "table") continue;
+
+    let type = c.type;
+    let aggregation = c.aggregation;
+
+    // Coerce/validate by type
+    if (type === "line" || type === "area") {
+      if (!xCol || (!xCol.isDate && !xCol.isNumeric)) continue;
+      if (!yCols.some((n) => byName.get(n)?.isNumeric)) continue;
+      if (aggregation === "none" || aggregation === "count") aggregation = "sum";
+    } else if (type === "bar") {
+      if (!xCol || xCol.isNumeric || xCol.isDate) continue;
+      const card = xCol.unique || uniqueValuesInSample(xCol.name);
+      if (card < 2 || card > 30) continue;
+      if (yCols.length === 0) aggregation = "count";
+      else if (aggregation === "none") aggregation = "sum";
+    } else if (type === "pie") {
+      if (!xCol || xCol.isNumeric || xCol.isDate) continue;
+      const card = xCol.unique || uniqueValuesInSample(xCol.name);
+      if (card < 2 || card > 8) {
+        // demote to bar if too many slices
+        if (card >= 2 && card <= 30) { type = "bar"; if (aggregation === "none") aggregation = yCols.length ? "sum" : "count"; }
+        else continue;
+      } else if (aggregation === "none") {
+        aggregation = yCols.length ? "sum" : "count";
+      }
+    } else if (type === "scatter") {
+      if (!xCol?.isNumeric) continue;
+      const y = yCols[0] ? byName.get(yCols[0]) : null;
+      if (!y?.isNumeric || y.name === xCol.name) continue;
+      aggregation = "none";
+    } else if (type === "table") {
+      if (yCols.length === 0) continue;
+    }
+
+    const key = `${type}|${c.x ?? ""}|${yCols.join(",")}|${c.groupBy ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleaned.push({ ...c, type, aggregation, y: yCols.length ? yCols : c.y, groupBy: c.groupBy && byName.has(c.groupBy) ? c.groupBy : null });
+  }
+
+  // Top-up with deterministic charts if we have <4 valid ones
+  if (cleaned.length < 4) {
+    const filler = fallbackDashboard(ds, u).charts;
+    for (const c of filler) {
+      const key = `${c.type}|${c.x ?? ""}|${c.y.join(",")}|${c.groupBy ?? ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      cleaned.push(c);
+      if (cleaned.length >= 5) break;
+    }
+  }
+
+  return { ...dashboard, charts: cleaned.slice(0, 6) };
+}
+
 function fallbackDashboard(ds: { name: string; row_count: number; columns: unknown }, u: Understanding): Dashboard {
+
   const cols = ds.columns as ColumnMeta[];
   const metrics = cols.filter((c) => c.isNumeric).slice(0, 3);
   const kpis: Dashboard["kpis"] = [
@@ -390,14 +475,26 @@ function fallbackDashboard(ds: { name: string; row_count: number; columns: unkno
       explanation: `Aggregates ${metric} for each ${dim}.`,
     });
   }
-  if (dim) {
+  const pieDim = cols.find((c) => !c.isNumeric && !c.isDate && c.unique >= 2 && c.unique <= 6)?.name ?? null;
+  if (pieDim) {
     charts.push({
-      id: "pie", type: "pie", title: `Share by ${dim}`,
-      description: `Distribution of records across ${dim}.`,
-      x: dim, y: ["count"], groupBy: null, aggregation: "count",
-      explanation: `Portion of rows falling into each ${dim} category.`,
+      id: "pie", type: "pie", title: `Share by ${pieDim}`,
+      description: `Distribution of records across ${pieDim}.`,
+      x: pieDim, y: ["count"], groupBy: null, aggregation: "count",
+      explanation: `Portion of rows falling into each ${pieDim} category.`,
     });
   }
+  // Second bar chart across a different dimension for richer coverage
+  const dim2 = u.dimension_columns?.find((d) => d !== dim) ?? cols.find((c) => c.name !== dim && !c.isNumeric && !c.isDate && c.unique >= 2 && c.unique <= 15)?.name ?? null;
+  if (dim2 && metric) {
+    charts.push({
+      id: "bd2", type: "bar", title: `${metric} by ${dim2}`,
+      description: `Comparison of ${metric} across ${dim2}.`,
+      x: dim2, y: [metric], groupBy: null, aggregation: "avg",
+      explanation: `Average ${metric} per ${dim2}.`,
+    });
+  }
+
   if (metrics.length >= 2) {
     charts.push({
       id: "sc", type: "scatter", title: `${metrics[0].name} vs ${metrics[1].name}`,
