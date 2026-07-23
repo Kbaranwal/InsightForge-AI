@@ -475,14 +475,26 @@ function fallbackDashboard(ds: { name: string; row_count: number; columns: unkno
       explanation: `Aggregates ${metric} for each ${dim}.`,
     });
   }
-  if (dim) {
+  const pieDim = cols.find((c) => !c.isNumeric && !c.isDate && c.unique >= 2 && c.unique <= 6)?.name ?? null;
+  if (pieDim) {
     charts.push({
-      id: "pie", type: "pie", title: `Share by ${dim}`,
-      description: `Distribution of records across ${dim}.`,
-      x: dim, y: ["count"], groupBy: null, aggregation: "count",
-      explanation: `Portion of rows falling into each ${dim} category.`,
+      id: "pie", type: "pie", title: `Share by ${pieDim}`,
+      description: `Distribution of records across ${pieDim}.`,
+      x: pieDim, y: ["count"], groupBy: null, aggregation: "count",
+      explanation: `Portion of rows falling into each ${pieDim} category.`,
     });
   }
+  // Second bar chart across a different dimension for richer coverage
+  const dim2 = u.dimension_columns?.find((d) => d !== dim) ?? cols.find((c) => c.name !== dim && !c.isNumeric && !c.isDate && c.unique >= 2 && c.unique <= 15)?.name ?? null;
+  if (dim2 && metric) {
+    charts.push({
+      id: "bd2", type: "bar", title: `${metric} by ${dim2}`,
+      description: `Comparison of ${metric} across ${dim2}.`,
+      x: dim2, y: [metric], groupBy: null, aggregation: "avg",
+      explanation: `Average ${metric} per ${dim2}.`,
+    });
+  }
+
   if (metrics.length >= 2) {
     charts.push({
       id: "sc", type: "scatter", title: `${metrics[0].name} vs ${metrics[1].name}`,
