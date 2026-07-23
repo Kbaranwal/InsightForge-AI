@@ -359,7 +359,90 @@ function fmtNum(n: number): string {
   return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(2);
 }
 
+// Post-process AI dashboard: drop invalid charts, coerce mismatched types, dedupe, top-up.
+function validateAndEnrichCharts(
+  dashboard: Dashboard,
+  ds: { name: string; row_count: number; columns: unknown; sample_rows: unknown },
+  u: Understanding,
+): Dashboard {
+  const cols = ds.columns as ColumnMeta[];
+  const byName = new Map(cols.map((c) => [c.name, c]));
+  const sample = (ds.sample_rows as Array<Record<string, unknown>>) ?? [];
+  const uniqueValuesInSample = (name: string) => {
+    const s = new Set<string>();
+    for (const r of sample) {
+      const v = r?.[name];
+      if (v === null || v === undefined || v === "") continue;
+      s.add(String(v));
+      if (s.size > 50) break;
+    }
+    return s.size;
+  };
+
+  const seen = new Set<string>();
+  const cleaned: Dashboard["charts"] = [];
+  for (const c of dashboard.charts ?? []) {
+    const xCol = c.x ? byName.get(c.x) : null;
+    const yCols = (c.y ?? []).filter((n) => byName.has(n));
+    if (c.x && !xCol) continue; // x refers to missing column
+    if (yCols.length === 0 && c.aggregation !== "count" && c.type !== "table") continue;
+
+    let type = c.type;
+    let aggregation = c.aggregation;
+
+    // Coerce/validate by type
+    if (type === "line" || type === "area") {
+      if (!xCol || (!xCol.isDate && !xCol.isNumeric)) continue;
+      if (!yCols.some((n) => byName.get(n)?.isNumeric)) continue;
+      if (aggregation === "none" || aggregation === "count") aggregation = "sum";
+    } else if (type === "bar") {
+      if (!xCol || xCol.isNumeric || xCol.isDate) continue;
+      const card = xCol.unique || uniqueValuesInSample(xCol.name);
+      if (card < 2 || card > 30) continue;
+      if (yCols.length === 0) aggregation = "count";
+      else if (aggregation === "none") aggregation = "sum";
+    } else if (type === "pie") {
+      if (!xCol || xCol.isNumeric || xCol.isDate) continue;
+      const card = xCol.unique || uniqueValuesInSample(xCol.name);
+      if (card < 2 || card > 8) {
+        // demote to bar if too many slices
+        if (card >= 2 && card <= 30) { type = "bar"; if (aggregation === "none") aggregation = yCols.length ? "sum" : "count"; }
+        else continue;
+      } else if (aggregation === "none") {
+        aggregation = yCols.length ? "sum" : "count";
+      }
+    } else if (type === "scatter") {
+      if (!xCol?.isNumeric) continue;
+      const y = yCols[0] ? byName.get(yCols[0]) : null;
+      if (!y?.isNumeric || y.name === xCol.name) continue;
+      aggregation = "none";
+    } else if (type === "table") {
+      if (yCols.length === 0) continue;
+    }
+
+    const key = `${type}|${c.x ?? ""}|${yCols.join(",")}|${c.groupBy ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleaned.push({ ...c, type, aggregation, y: yCols.length ? yCols : c.y, groupBy: c.groupBy && byName.has(c.groupBy) ? c.groupBy : null });
+  }
+
+  // Top-up with deterministic charts if we have <4 valid ones
+  if (cleaned.length < 4) {
+    const filler = fallbackDashboard(ds, u).charts;
+    for (const c of filler) {
+      const key = `${c.type}|${c.x ?? ""}|${c.y.join(",")}|${c.groupBy ?? ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      cleaned.push(c);
+      if (cleaned.length >= 5) break;
+    }
+  }
+
+  return { ...dashboard, charts: cleaned.slice(0, 6) };
+}
+
 function fallbackDashboard(ds: { name: string; row_count: number; columns: unknown }, u: Understanding): Dashboard {
+
   const cols = ds.columns as ColumnMeta[];
   const metrics = cols.filter((c) => c.isNumeric).slice(0, 3);
   const kpis: Dashboard["kpis"] = [
