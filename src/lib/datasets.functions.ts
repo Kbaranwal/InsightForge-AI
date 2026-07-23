@@ -361,7 +361,7 @@ function fallbackDashboard(ds: { name: string; row_count: number; columns: unkno
   const cols = ds.columns as ColumnMeta[];
   const metrics = cols.filter((c) => c.isNumeric).slice(0, 3);
   const kpis: Dashboard["kpis"] = [
-    { label: "Rows", value: ds.row_count.toLocaleString(), subvalue: `${cols.length} columns`, trend: "none", explanation: "Total records in the dataset." },
+    { label: "Rows", value: ds.row_count.toLocaleString(), subvalue: `${cols.length} columns`, trend: "none" as const, explanation: "Total records in the dataset." },
     ...metrics.map((m) => ({
       label: `Avg ${m.name}`,
       value: fmtNum(m.mean ?? 0),
