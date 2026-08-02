@@ -82,7 +82,7 @@ function DatasetDetail() {
   // so charts and exports can reference them even for datasets ingested earlier.
   const rawRows = (dataset.sample_rows as Array<Record<string, unknown>>) ?? [];
   const revenuePair = detectRevenuePair(
-    (dataset.columns as RoleColumn[]) ?? [],
+    (dataset.columns as unknown as RoleColumn[]) ?? [],
     dataset.row_count || rawRows.length,
   );
   const chartRows = withDerivedFields(rawRows, revenuePair);
