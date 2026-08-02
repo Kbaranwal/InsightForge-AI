@@ -15,6 +15,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { ChartRenderer } from "@/components/chart-renderer";
+import { detectRevenuePair, withDerivedFields, type RoleColumn } from "@/lib/analysis/column-roles";
 import { ChatPanel } from "@/components/chat-panel";
 import { getDataset, analyzeDataset, generateReport } from "@/lib/datasets.functions";
 import type { Dashboard, Insights, Understanding, Forecast, Report } from "@/lib/datasets.functions";
@@ -77,6 +78,15 @@ function DatasetDetail() {
   const forecasts = ((analysis?.forecasts as { forecasts?: Forecast[] } | null)?.forecasts ?? []) as Forecast[];
   const report = (analysis?.report as Report | null) ?? null;
 
+  // Enrich sample rows with derived metrics (e.g. Revenue = Quantity x UnitPrice)
+  // so charts and exports can reference them even for datasets ingested earlier.
+  const rawRows = (dataset.sample_rows as Array<Record<string, unknown>>) ?? [];
+  const revenuePair = detectRevenuePair(
+    (dataset.columns as RoleColumn[]) ?? [],
+    dataset.row_count || rawRows.length,
+  );
+  const chartRows = withDerivedFields(rawRows, revenuePair);
+
   const reportMut = useMutation({
     mutationFn: () => generateReport({ data: { id } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["dataset", id] }); toast.success("Report generated"); },
@@ -92,7 +102,7 @@ function DatasetDetail() {
         dashboard, insights, recommendations, understanding, forecasts,
         executive_summary: analysis?.executive_summary ?? null,
         columns: dataset.columns as Array<{ name: string; type: string }>,
-        rows: dataset.sample_rows as Array<Record<string, unknown>>,
+        rows: chartRows,
       };
       if (fmt === "csv") exportCSV(payload);
       else if (fmt === "xlsx") exportExcel(payload);
@@ -219,7 +229,7 @@ function DatasetDetail() {
                     </div>
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border rounded-full px-2 py-0.5">{c.type}</span>
                   </div>
-                  <ChartRenderer spec={c} rows={dataset.sample_rows as Array<Record<string, unknown>>} />
+                  <ChartRenderer spec={c} rows={chartRows} />
                   <div className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
                     <span className="text-primary font-medium">Why: </span>{c.explanation}
                   </div>
