@@ -459,9 +459,8 @@ function validateAndEnrichCharts(
   ds: { name: string; row_count: number; columns: unknown; sample_rows: unknown },
   u: Understanding,
 ): Dashboard {
-  const cols = ds.columns as ColumnMeta[];
+  const { cols, rows: sample } = prepareAnalysis(ds);
   const byName = new Map(cols.map((c) => [c.name, c]));
-  const sample = (ds.sample_rows as Array<Record<string, unknown>>) ?? [];
   const uniqueValuesInSample = (name: string) => {
     const s = new Set<string>();
     for (const r of sample) {
@@ -472,43 +471,45 @@ function validateAndEnrichCharts(
     }
     return s.size;
   };
+  const cardinality = (c: ColumnMeta) => c.unique || uniqueValuesInSample(c.name);
+  const isMetric = (n: string) => byName.get(n)?.role === "metric";
 
   const seen = new Set<string>();
+  // Track (x + measure) groupings so a bar and a pie never duplicate each other.
+  const groupings = new Set<string>();
   const cleaned: Dashboard["charts"] = [];
+
   for (const c of dashboard.charts ?? []) {
     const xCol = c.x ? byName.get(c.x) : null;
-    const yCols = (c.y ?? []).filter((n) => byName.has(n));
+    // Identifier columns are never measures.
+    const yCols = (c.y ?? []).filter((n) => byName.has(n) && !isIdentifier(byName.get(n)));
     if (c.x && !xCol) continue; // x refers to missing column
     if (yCols.length === 0 && c.aggregation !== "count" && c.type !== "table") continue;
 
     let type = c.type;
     let aggregation = c.aggregation;
 
-    // Coerce/validate by type
     if (type === "line" || type === "area") {
-      if (!xCol || (!xCol.isDate && !xCol.isNumeric)) continue;
-      if (!yCols.some((n) => byName.get(n)?.isNumeric)) continue;
+      if (!xCol || (!xCol.isDate && !isMetric(xCol.name))) continue;
+      if (isIdentifier(xCol)) continue;
+      if (!yCols.some(isMetric)) continue;
       if (aggregation === "none" || aggregation === "count") aggregation = "sum";
-    } else if (type === "bar") {
-      if (!xCol || xCol.isNumeric || xCol.isDate) continue;
-      const card = xCol.unique || uniqueValuesInSample(xCol.name);
+    } else if (type === "bar" || type === "pie") {
+      // x must be a grouping dimension (identifiers are never a chart axis)
+      if (!xCol || xCol.isNumeric || xCol.isDate || isIdentifier(xCol)) continue;
+      const card = cardinality(xCol);
       if (card < 2 || card > 30) continue;
       if (yCols.length === 0) aggregation = "count";
       else if (aggregation === "none") aggregation = "sum";
-    } else if (type === "pie") {
-      if (!xCol || xCol.isNumeric || xCol.isDate) continue;
-      const card = xCol.unique || uniqueValuesInSample(xCol.name);
-      if (card < 2 || card > 8) {
-        // demote to bar if too many slices
-        if (card >= 2 && card <= 30) { type = "bar"; if (aggregation === "none") aggregation = yCols.length ? "sum" : "count"; }
-        else continue;
-      } else if (aggregation === "none") {
-        aggregation = yCols.length ? "sum" : "count";
-      }
+      // Rule: pie for <=6 categories, bar for more — never both for one grouping.
+      type = card <= 6 ? "pie" : "bar";
     } else if (type === "scatter") {
-      if (!xCol?.isNumeric) continue;
-      const y = yCols[0] ? byName.get(yCols[0]) : null;
-      if (!y?.isNumeric || y.name === xCol.name) continue;
+      // Only between two genuine metrics, and only if a relationship is plausible.
+      if (!xCol || !isMetric(xCol.name)) continue;
+      const yName = yCols[0];
+      if (!yName || !isMetric(yName) || yName === xCol.name) continue;
+      const r = correlation(sample, xCol.name, yName);
+      if (r === null || Math.abs(r) < 0.15) continue; // no meaningful relationship
       aggregation = "none";
     } else if (type === "table") {
       if (yCols.length === 0) continue;
@@ -516,8 +517,16 @@ function validateAndEnrichCharts(
 
     const key = `${type}|${c.x ?? ""}|${yCols.join(",")}|${c.groupBy ?? ""}`;
     if (seen.has(key)) continue;
+    const grouping = `${c.x ?? ""}|${yCols.join(",") || "count"}`;
+    if ((type === "bar" || type === "pie") && groupings.has(grouping)) continue;
     seen.add(key);
-    cleaned.push({ ...c, type, aggregation, y: yCols.length ? yCols : c.y, groupBy: c.groupBy && byName.has(c.groupBy) ? c.groupBy : null });
+    if (type === "bar" || type === "pie") groupings.add(grouping);
+    const groupByCol = c.groupBy ? byName.get(c.groupBy) : null;
+    cleaned.push({
+      ...c, type, aggregation,
+      y: yCols.length ? yCols : c.y,
+      groupBy: groupByCol && !isIdentifier(groupByCol) && !groupByCol.isNumeric ? c.groupBy : null,
+    });
   }
 
   // Top-up with deterministic charts if we have <4 valid ones
@@ -525,81 +534,170 @@ function validateAndEnrichCharts(
     const filler = fallbackDashboard(ds, u).charts;
     for (const c of filler) {
       const key = `${c.type}|${c.x ?? ""}|${c.y.join(",")}|${c.groupBy ?? ""}`;
+      const grouping = `${c.x ?? ""}|${c.y.join(",") || "count"}`;
       if (seen.has(key)) continue;
+      if ((c.type === "bar" || c.type === "pie") && groupings.has(grouping)) continue;
       seen.add(key);
+      if (c.type === "bar" || c.type === "pie") groupings.add(grouping);
       cleaned.push(c);
       if (cleaned.length >= 5) break;
     }
   }
 
-  return { ...dashboard, charts: cleaned.slice(0, 6) };
+  // KPIs must never be built on identifier columns.
+  const kpis = (dashboard.kpis ?? []).filter((k) => {
+    const idHit = cols.find((c) => isIdentifier(c) && new RegExp(`\\b${escapeRe(c.name)}\\b`, "i").test(k.label));
+    return !idHit || /count|records|rows|number of/i.test(k.label);
+  });
+
+  return { ...dashboard, kpis: kpis.length ? kpis : fallbackDashboard(ds, u).kpis, charts: cleaned.slice(0, 6) };
 }
 
-function fallbackDashboard(ds: { name: string; row_count: number; columns: unknown }, u: Understanding): Dashboard {
+function escapeRe(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
-  const cols = ds.columns as ColumnMeta[];
-  const metrics = cols.filter((c) => c.isNumeric).slice(0, 3);
-  const kpis: Dashboard["kpis"] = [
-    { label: "Rows", value: ds.row_count.toLocaleString(), subvalue: `${cols.length} columns`, trend: "none" as const, explanation: "Total records in the dataset." },
-    ...metrics.map((m) => ({
-      label: `Avg ${m.name}`,
-      value: fmtNum(m.mean ?? 0),
-      subvalue: `min ${fmtNum(Number(m.min))} · max ${fmtNum(Number(m.max))}`,
+/** Pearson correlation between two numeric columns of the sample. */
+function correlation(rows: Array<Record<string, unknown>>, a: string, b: string): number | null {
+  const pts: Array<[number, number]> = [];
+  for (const r of rows) {
+    const x = Number(r[a]); const y = Number(r[b]);
+    if (Number.isFinite(x) && Number.isFinite(y)) pts.push([x, y]);
+  }
+  if (pts.length < 5) return null;
+  const n = pts.length;
+  const mx = pts.reduce((s, p) => s + p[0], 0) / n;
+  const my = pts.reduce((s, p) => s + p[1], 0) / n;
+  let num = 0, dx = 0, dy = 0;
+  for (const [x, y] of pts) { num += (x - mx) * (y - my); dx += (x - mx) ** 2; dy += (y - my) ** 2; }
+  return dx && dy ? num / Math.sqrt(dx * dy) : null;
+}
+
+/** Business-level aggregates computed from the sample (identifier-free). */
+function businessStats(
+  ds: { row_count: number; columns: unknown; sample_rows: unknown },
+) {
+  const { cols, rows, derived } = prepareAnalysis(ds);
+  const metrics = orderMetrics(metricColumns(cols), derived?.name ?? null);
+  const headline = metrics[0] ?? null;
+  const dims = cols
+    .filter((c) => c.role === "categorical" && c.unique >= 2 && c.unique <= 30)
+    .sort((a, b) => a.unique - b.unique);
+  const timeCol = cols.find((c) => c.role === "time")?.name ?? null;
+
+  let total = 0;
+  const perDim = new Map<string, Map<string, number>>();
+  if (headline) {
+    for (const r of rows) {
+      const v = Number(r[headline.name]);
+      if (!Number.isFinite(v)) continue;
+      total += v;
+      for (const d of dims.slice(0, 2)) {
+        const key = String(r[d.name] ?? "—");
+        if (!perDim.has(d.name)) perDim.set(d.name, new Map());
+        const m = perDim.get(d.name)!;
+        m.set(key, (m.get(key) ?? 0) + v);
+      }
+    }
+  }
+  const topBy = [...perDim.entries()].map(([dim, m]) => {
+    const sorted = [...m.entries()].sort((a, b) => b[1] - a[1]);
+    const sum = sorted.reduce((s, e) => s + e[1], 0) || 1;
+    return { dim, label: sorted[0]?.[0] ?? "—", value: sorted[0]?.[1] ?? 0, share: ((sorted[0]?.[1] ?? 0) / sum) * 100 };
+  });
+
+  return { cols, rows, derived, metrics, headline, dims, timeCol, total, topBy };
+}
+
+function fallbackDashboard(ds: { name: string; row_count: number; columns: unknown; sample_rows?: unknown }, u: Understanding): Dashboard {
+  const s = businessStats({ row_count: ds.row_count, columns: ds.columns, sample_rows: ds.sample_rows ?? [] });
+  const { cols, metrics, headline, dims, timeCol, total, topBy } = s;
+
+  const kpis: Dashboard["kpis"] = [];
+  if (headline) {
+    kpis.push({
+      label: `Total ${headline.name}`,
+      value: fmtNum(total),
+      subvalue: `across ${ds.row_count.toLocaleString()} records`,
       trend: "none" as const,
-      explanation: `Mean of ${m.name} across sampled rows.`,
-    })),
-  ].slice(0, 4);
+      explanation: `Sum of ${headline.name} over the analysed rows — the headline business volume.`,
+    });
+    kpis.push({
+      label: `Avg ${headline.name}`,
+      value: fmtNum(headline.mean ?? 0),
+      subvalue: `min ${fmtNum(Number(headline.min))} · max ${fmtNum(Number(headline.max))}`,
+      trend: "none" as const,
+      explanation: `Average ${headline.name} per record.`,
+    });
+  }
+  if (topBy[0]) {
+    kpis.push({
+      label: `Top ${topBy[0].dim}`,
+      value: topBy[0].label,
+      subvalue: `${fmtNum(topBy[0].value)} · ${topBy[0].share.toFixed(1)}% share`,
+      trend: "none" as const,
+      explanation: `Best performing ${topBy[0].dim} by ${headline?.name ?? "volume"}.`,
+    });
+  }
+  kpis.push({
+    label: "Records",
+    value: ds.row_count.toLocaleString(),
+    subvalue: `${cols.length} columns`,
+    trend: "none" as const,
+    explanation: "Total records in the dataset.",
+  });
 
   const charts: Dashboard["charts"] = [];
-  const dim = u.dimension_columns?.[0] ?? cols.find((c) => !c.isNumeric && !c.isDate && c.unique <= 20)?.name ?? null;
-  const metric = metrics[0]?.name ?? null;
-  if (u.time_column && metric) {
+  const groupings = new Set<string>();
+  const metric = headline?.name ?? null;
+
+  if (timeCol && metric) {
     charts.push({
       id: "ts", type: "line", title: `${metric} over time`,
-      description: `Trend of ${metric} across ${u.time_column}.`,
-      x: u.time_column, y: [metric], groupBy: null, aggregation: "sum",
-      explanation: `Shows how ${metric} evolves over ${u.time_column}.`,
-    });
-  }
-  if (dim && metric) {
-    charts.push({
-      id: "bd", type: "bar", title: `${metric} by ${dim}`,
-      description: `Comparison of ${metric} across ${dim}.`,
-      x: dim, y: [metric], groupBy: null, aggregation: "sum",
-      explanation: `Aggregates ${metric} for each ${dim}.`,
-    });
-  }
-  const pieDim = cols.find((c) => !c.isNumeric && !c.isDate && c.unique >= 2 && c.unique <= 6)?.name ?? null;
-  if (pieDim) {
-    charts.push({
-      id: "pie", type: "pie", title: `Share by ${pieDim}`,
-      description: `Distribution of records across ${pieDim}.`,
-      x: pieDim, y: ["count"], groupBy: null, aggregation: "count",
-      explanation: `Portion of rows falling into each ${pieDim} category.`,
-    });
-  }
-  // Second bar chart across a different dimension for richer coverage
-  const dim2 = u.dimension_columns?.find((d) => d !== dim) ?? cols.find((c) => c.name !== dim && !c.isNumeric && !c.isDate && c.unique >= 2 && c.unique <= 15)?.name ?? null;
-  if (dim2 && metric) {
-    charts.push({
-      id: "bd2", type: "bar", title: `${metric} by ${dim2}`,
-      description: `Comparison of ${metric} across ${dim2}.`,
-      x: dim2, y: [metric], groupBy: null, aggregation: "avg",
-      explanation: `Average ${metric} per ${dim2}.`,
+      description: `Trend of ${metric} across ${timeCol}.`,
+      x: timeCol, y: [metric], groupBy: null, aggregation: "sum",
+      explanation: `Shows how total ${metric} evolves over ${timeCol}.`,
     });
   }
 
-  if (metrics.length >= 2) {
+  // One chart per dimension — pie when <=6 categories, bar otherwise.
+  for (const d of dims.slice(0, 3)) {
+    const grouping = `${d.name}|${metric ?? "count"}`;
+    if (groupings.has(grouping)) continue;
+    groupings.add(grouping);
+    const pie = d.unique <= 6;
     charts.push({
-      id: "sc", type: "scatter", title: `${metrics[0].name} vs ${metrics[1].name}`,
-      description: `Relationship between two key metrics.`,
-      x: metrics[0].name, y: [metrics[1].name], groupBy: null, aggregation: "none",
-      explanation: `Explores whether ${metrics[0].name} and ${metrics[1].name} correlate.`,
+      id: `dim-${charts.length}`,
+      type: pie ? "pie" : "bar",
+      title: metric ? `${metric} by ${d.name}` : `Records by ${d.name}`,
+      description: metric ? `Comparison of ${metric} across ${d.name}.` : `Record distribution across ${d.name}.`,
+      x: d.name,
+      y: metric ? [metric] : ["count"],
+      groupBy: null,
+      aggregation: metric ? "sum" : "count",
+      explanation: pie
+        ? `Share of ${metric ?? "records"} held by each ${d.name} (few enough categories for a share view).`
+        : `Aggregates ${metric ?? "records"} for each ${d.name}, ranked for comparison.`,
     });
+    if (charts.length >= 4) break;
   }
+
+  // Scatter only between two real metrics with a plausible relationship.
+  if (metrics.length >= 2) {
+    const a = metrics[0].name;
+    const b = metrics.find((m) => m.name !== a)!.name;
+    const r = correlation(s.rows, a, b);
+    if (r !== null && Math.abs(r) >= 0.15) {
+      charts.push({
+        id: "sc", type: "scatter", title: `${a} vs ${b}`,
+        description: `Relationship between two key metrics (r=${r.toFixed(2)}).`,
+        x: a, y: [b], groupBy: null, aggregation: "none",
+        explanation: `Explores how ${a} moves with ${b}; correlation is ${r.toFixed(2)}.`,
+      });
+    }
+  }
+
   return {
     title: `${ds.name} — Overview`,
-    kpis,
+    kpis: kpis.slice(0, 4),
     charts: charts.length ? charts : [{
       id: "tbl", type: "table", title: "Sample rows",
       description: "First rows of the dataset.",
@@ -609,33 +707,68 @@ function fallbackDashboard(ds: { name: string; row_count: number; columns: unkno
   };
 }
 
-function fallbackInsights(ds: { row_count: number; columns: unknown }, u: Understanding): Insights {
-  const cols = ds.columns as ColumnMeta[];
+function fallbackInsights(ds: { row_count: number; columns: unknown; sample_rows?: unknown }, u: Understanding): Insights {
+  const s = businessStats({ row_count: ds.row_count, columns: ds.columns, sample_rows: ds.sample_rows ?? [] });
+  const { cols, headline, total, topBy, timeCol, derived } = s;
   const missing = cols.filter((c) => c.missing > 0);
-  const metrics = cols.filter((c) => c.isNumeric);
-  const insights: Insights["insights"] = [
-    { title: "Dataset size", detail: `${ds.row_count.toLocaleString()} rows across ${cols.length} columns.`, evidence: "row_count, column_count" },
-    ...metrics.slice(0, 2).map((m) => ({
-      title: `${m.name} distribution`,
-      detail: `${m.name} ranges from ${fmtNum(Number(m.min))} to ${fmtNum(Number(m.max))} with a mean of ${fmtNum(m.mean ?? 0)}.`,
-      evidence: `min/max/mean of ${m.name}`,
-    })),
-  ];
-  if (u.dimension_columns?.[0]) {
-    insights.push({ title: "Primary segmentation", detail: `${u.dimension_columns[0]} is the main categorical dimension for slicing this data.`, evidence: `unique values of ${u.dimension_columns[0]}` });
+  const ids = cols.filter(isIdentifier);
+
+  const insights: Insights["insights"] = [];
+  if (headline) {
+    insights.push({
+      title: `Total ${headline.name}`,
+      detail: `${headline.name} totals ${fmtNum(total)} across ${ds.row_count.toLocaleString()} records, averaging ${fmtNum(headline.mean ?? 0)} per record.`,
+      evidence: `sum and mean of ${headline.name}${derived ? ` (derived as ${derived.quantity} × ${derived.price})` : ""}`,
+    });
   }
-  const anomalies = missing.slice(0, 3).map((c) => ({
+  if (topBy[0]) {
+    insights.push({
+      title: `Top performing ${topBy[0].dim}`,
+      detail: `"${topBy[0].label}" leads on ${headline?.name ?? "volume"} with ${fmtNum(topBy[0].value)} (${topBy[0].share.toFixed(1)}% of the total).`,
+      evidence: `${headline?.name ?? "records"} grouped by ${topBy[0].dim}`,
+    });
+  }
+  if (timeCol && headline) {
+    insights.push({
+      title: "Trend over time",
+      detail: `${headline.name} is tracked against ${timeCol}; use the trend chart and forecast tab to monitor direction.`,
+      evidence: `${headline.name} by ${timeCol}`,
+    });
+  }
+  if (headline && headline.stddev) {
+    const spread = (headline.stddev / Math.max(Math.abs(headline.mean ?? 1), 1e-9)) * 100;
+    insights.push({
+      title: `${headline.name} variability`,
+      detail: `${headline.name} ranges ${fmtNum(Number(headline.min))}–${fmtNum(Number(headline.max))} with a ${spread.toFixed(0)}% coefficient of variation, indicating ${spread > 60 ? "a long tail of outsized records" : "fairly consistent record sizes"}.`,
+      evidence: `min/max/stddev of ${headline.name}`,
+    });
+  }
+  if (!insights.length) {
+    insights.push({ title: "Dataset size", detail: `${ds.row_count.toLocaleString()} rows across ${cols.length} columns.`, evidence: "row_count, column_count" });
+  }
+
+  const anomalies: Insights["anomalies"] = missing.slice(0, 3).map((c) => ({
     title: `Missing values in ${c.name}`, detail: `${c.name} has ${c.missing} missing entries — verify data quality upstream.`,
   }));
+  if (headline && headline.stddev && headline.max !== null && Number(headline.max) > (headline.mean ?? 0) + 3 * headline.stddev) {
+    anomalies.push({
+      title: `Outlier in ${headline.name}`,
+      detail: `The maximum ${headline.name} (${fmtNum(Number(headline.max))}) sits more than 3 standard deviations above the mean — worth verifying.`,
+    });
+  }
+
   return {
-    insights,
+    insights: insights.slice(0, 6),
     anomalies,
     recommendations: [
-      { title: "Validate data quality", detail: "Investigate columns with missing values and confirm ingestion is complete.", impact: missing.length ? "high" : "low" },
-      { title: "Explore key metrics", detail: `Drill into ${metrics[0]?.name ?? "core metrics"} across ${u.dimension_columns?.[0] ?? "dimensions"} for deeper patterns.`, impact: "medium" },
-      { title: "Track trend over time", detail: u.time_column ? `Monitor ${metrics[0]?.name ?? "metrics"} against ${u.time_column} to catch shifts early.` : "Add a time dimension to enable trend analysis.", impact: "medium" },
-    ],
-    executive_summary: `This dataset covers ${ds.row_count.toLocaleString()} records across ${cols.length} columns${u.domain ? ` in the ${u.domain} domain` : ""}. Key metrics include ${metrics.slice(0, 3).map((m) => m.name).join(", ") || "n/a"}. Use the dashboard to explore trends and segment performance.`,
+      topBy[0]
+        ? { title: `Double down on ${topBy[0].label}`, detail: `"${topBy[0].label}" drives ${topBy[0].share.toFixed(1)}% of ${headline?.name ?? "volume"} in ${topBy[0].dim}. Protect this segment and study what makes it work before scaling elsewhere.`, impact: "high" as const }
+        : { title: "Add a segmentation column", detail: "No usable grouping dimension was found, which limits comparative analysis.", impact: "medium" as const },
+      { title: "Validate data quality", detail: missing.length ? `Investigate missing values in ${missing.slice(0, 3).map((c) => c.name).join(", ")}.` : "No missing values detected; keep ingestion checks in place.", impact: missing.length ? "high" as const : "low" as const },
+      { title: timeCol ? "Track the trend" : "Add a time dimension", detail: timeCol ? `Monitor ${headline?.name ?? "the headline metric"} against ${timeCol} to catch shifts early.` : "Add a date column to unlock trend and forecast analysis.", impact: "medium" as const },
+      ...(ids.length ? [{ title: "Keep identifiers out of metrics", detail: `${ids.map((c) => c.name).join(", ")} are record keys and are excluded from averages and trends by design — use them only for record counts and lookups.`, impact: "low" as const }] : []),
+    ].slice(0, 5),
+    executive_summary: `${headline ? `${headline.name} totals ${fmtNum(total)} across ${ds.row_count.toLocaleString()} records (avg ${fmtNum(headline.mean ?? 0)}).` : `This dataset covers ${ds.row_count.toLocaleString()} records across ${cols.length} columns.`}${topBy[0] ? ` "${topBy[0].label}" is the strongest ${topBy[0].dim}, contributing ${topBy[0].share.toFixed(1)}% of the total.` : ""}${timeCol ? ` Performance is tracked over ${timeCol}, enabling trend and forecast views.` : ""}${ids.length ? ` Identifier columns (${ids.map((c) => c.name).join(", ")}) are used only for record counts and are excluded from metric analysis.` : ""}`,
   };
 }
 
