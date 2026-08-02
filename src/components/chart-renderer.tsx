@@ -273,6 +273,18 @@ export function ChartRenderer({ spec, rows }: { spec: ChartSpec; rows: Array<Rec
       for (const p of scatter) { num += (p.x - mx) * (p.y - my); dx += (p.x - mx) ** 2; dy += (p.y - my) ** 2; }
       corr = dx && dy ? num / Math.sqrt(dx * dy) : null;
     }
+    // A near-zero correlation scatter is noise, not insight — say so instead.
+    if (scatter.length < 5 || corr === null || Math.abs(corr) < 0.15) {
+      return (
+        <div className="h-56 flex flex-col items-center justify-center text-center gap-2 rounded-lg border border-dashed border-border bg-muted/20 px-6">
+          <Target className="size-5 text-muted-foreground" />
+          <div className="text-sm font-medium text-foreground">No meaningful numeric relationships found</div>
+          <div className="text-xs text-muted-foreground max-w-sm">
+            {xk} and {yk} show no usable correlation{corr !== null ? ` (r=${corr.toFixed(2)})` : ""}, so a scatter plot would be misleading here.
+          </div>
+        </div>
+      );
+    }
     return (
       <div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
@@ -281,6 +293,7 @@ export function ChartRenderer({ spec, rows }: { spec: ChartSpec; rows: Array<Rec
           <StatChip icon={<Sigma className="size-3.5" />} label={`Avg ${xk}`} value={fmtNum(scatter.reduce((a, b) => a + b.x, 0) / (scatter.length || 1))} />
           <StatChip icon={<Sigma className="size-3.5" />} label={`Avg ${yk}`} value={fmtNum(scatter.reduce((a, b) => a + b.y, 0) / (scatter.length || 1))} />
         </div>
+
         <ResponsiveContainer width="100%" height={CHART_H}>
           <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid stroke="var(--color-border)" strokeOpacity={0.6} strokeDasharray="3 3" />

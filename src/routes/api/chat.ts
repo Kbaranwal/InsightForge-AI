@@ -4,6 +4,10 @@ import { createClient } from "@supabase/supabase-js";
 import { createGateway, DEFAULT_MODEL } from "@/lib/ai-gateway.server";
 import type { Database } from "@/integrations/supabase/types";
 import type { ColumnMeta } from "@/lib/datasets.functions";
+import {
+  classifyColumns, detectRevenuePair, withDerivedFields, derivedRevenueColumn,
+  type RoleColumn,
+} from "@/lib/analysis/column-roles";
 
 type Row = Record<string, unknown>;
 
@@ -71,8 +75,12 @@ function fmt(n: number): string {
 }
 
 function buildStatsContext(rows: Row[], cols: ColumnMeta[], totalRowCount: number) {
-  const numeric = cols.filter((c) => c.isNumeric || c.type === "number" || c.type === "integer");
-  const categorical = cols.filter((c) => c.type === "category" || c.type === "string");
+  // Identifier columns (OrderID, InvoiceNumber, ...) are keys, not measures:
+  // they are never summed, averaged or broken down.
+  const { roles } = classifyColumns(cols as RoleColumn[], totalRowCount || rows.length);
+  const numeric = cols.filter((c) => roles[c.name] === "metric");
+  const identifiers = cols.filter((c) => roles[c.name] === "identifier");
+  const categorical = cols.filter((c) => roles[c.name] === "categorical");
   const scale = rows.length > 0 && totalRowCount > rows.length ? totalRowCount / rows.length : 1;
 
   const numericBlock = numeric.map((c) => {
@@ -101,7 +109,14 @@ function buildStatsContext(rows: Row[], cols: ColumnMeta[], totalRowCount: numbe
     }
   }
 
-  return `NUMERIC COLUMN STATS (computed from ${rows.length} sample rows${scale > 1 ? `, dataset has ${totalRowCount} rows total` : ""}):
+  const idBlock = identifiers.length
+    ? identifiers.map((c) => `- ${c.name}: identifier (${c.unique} distinct values) — count records only, never sum/average`).join("\n")
+    : "(none)";
+
+  return `IDENTIFIER COLUMNS (keys — use for counting/lookup only):
+${idBlock}
+
+METRIC COLUMN STATS (computed from ${rows.length} sample rows${scale > 1 ? `, dataset has ${totalRowCount} rows total` : ""}):
 ${numericBlock || "(none)"}
 
 CATEGORICAL TOP VALUES:
@@ -137,8 +152,13 @@ export const Route = createFileRoute("/api/chat")({
           const { data: ds, error } = await supabase.from("datasets").select("*").eq("id", datasetId).single();
           if (error || !ds) return new Response("Not found", { status: 404 });
 
-          const cols = ds.columns as unknown as ColumnMeta[];
-          const rows = (ds.sample_rows as unknown as Row[]) ?? [];
+          const baseCols = ds.columns as unknown as ColumnMeta[];
+          const baseRows = (ds.sample_rows as unknown as Row[]) ?? [];
+          const revenuePair = detectRevenuePair(baseCols as RoleColumn[], ds.row_count || baseRows.length);
+          const rows = withDerivedFields(baseRows, revenuePair);
+          const cols = revenuePair && !baseCols.some((c) => c.name === revenuePair.name)
+            ? [...baseCols, derivedRevenueColumn(rows, revenuePair) as unknown as ColumnMeta]
+            : baseCols;
           const sampleForModel = rows.slice(0, 40);
           const colDesc = cols.map((c) => `${c.name} [${c.type}] unique=${c.unique} missing=${c.missing}`).join("\n");
           const stats = buildStatsContext(rows, cols, ds.row_count);
@@ -150,6 +170,8 @@ HOW TO ANSWER
 - When the user asks about a concept that maps to an existing column under a different name (e.g. "total sales", "revenue", "spend", "amount") map it to the closest available metric column (like "Purchase Amount (USD)") and answer, briefly noting which column you used.
 - When the user asks for something that truly cannot be derived from any column (e.g. "profit" without cost/margin data), first give the closest useful metric you CAN compute (e.g. total revenue / total purchase amount, average order value), then in one short line note what additional column would be needed for the exact metric requested.
 - Never say "I cannot" without first providing the closest useful analysis.
+- NEVER compute averages, totals, trends or correlations on identifier columns (order IDs, invoice numbers, customer IDs). If asked, explain they are record keys and give the record count instead.
+- Prefer derived/headline revenue metrics (e.g. "Revenue (calculated)" = Quantity x UnitPrice) over raw quantity/price columns when answering about sales, revenue or totals.
 - When numbers come from the sample and the full dataset is larger, say "based on the sample" and give the estimated full-dataset figure using the scaling shown in the stats.
 - Format answers with markdown: short intro, then bullet points or a table. Bold the key number. Keep it concise.
 
