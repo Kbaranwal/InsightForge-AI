@@ -3,6 +3,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { generateObject, NoObjectGeneratedError } from "ai";
 import { createGateway, HEAVY_MODEL, DEFAULT_MODEL } from "./ai-gateway.server";
+import {
+  classifyColumns, detectRevenuePair, withDerivedFields, derivedRevenueColumn,
+  type ColumnRole, type RoleColumn,
+} from "./analysis/column-roles";
+
 
 // ---------- Types ----------
 export type ColumnType = "number" | "integer" | "string" | "boolean" | "date" | "datetime" | "category" | "unknown";
