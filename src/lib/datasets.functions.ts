@@ -97,6 +97,7 @@ export interface ForecastBundle { forecasts: Forecast[] }
 function profileColumns(rows: Array<Record<string, unknown>>): ColumnMeta[] {
   if (!rows.length) return [];
   const names = Array.from(new Set(rows.flatMap((r) => Object.keys(r))));
+  const metas: ColumnMeta[] =
   const dateRe = /^\d{4}[-/]\d{1,2}([-/]\d{1,2})?([ T]\d{1,2}:\d{2}(:\d{2})?)?/;
   return names.map((name) => {
     const values = rows.map((r) => r[name]).filter((v) => v !== null && v !== undefined && v !== "");
