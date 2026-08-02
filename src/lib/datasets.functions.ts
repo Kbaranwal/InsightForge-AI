@@ -382,11 +382,11 @@ export const analyzeDataset = createServerFn({ method: "POST" })
   });
 
 // ---------- Deterministic fallbacks so the dashboard is never empty ----------
-function fallbackUnderstanding(ds: { name: string; columns: unknown }): Understanding {
-  const cols = ds.columns as ColumnMeta[];
-  const timeCol = cols.find((c) => c.isDate)?.name ?? null;
-  const metrics = cols.filter((c) => c.isNumeric).map((c) => c.name);
-  const dims = cols.filter((c) => !c.isNumeric && !c.isDate && c.unique <= 50).map((c) => c.name);
+function fallbackUnderstanding(ds: { name: string; row_count: number; columns: unknown; sample_rows: unknown }): Understanding {
+  const { cols, derived } = prepareAnalysis(ds);
+  const timeCol = cols.find((c) => c.role === "time")?.name ?? null;
+  const metrics = orderMetrics(metricColumns(cols), derived?.name ?? null).map((c) => c.name);
+  const dims = cols.filter((c) => c.role === "categorical" && c.unique <= 50).map((c) => c.name);
   return {
     domain: "General",
     purpose: `Analytical overview of ${ds.name}.`,
@@ -398,6 +398,51 @@ function fallbackUnderstanding(ds: { name: string; columns: unknown }): Understa
     pii_columns: [],
   };
 }
+
+/** Put the derived/headline revenue metric first; drop identifiers. */
+function orderMetrics(metrics: ColumnMeta[], derivedName: string | null): ColumnMeta[] {
+  const score = (c: ColumnMeta) => {
+    if (derivedName && c.name === derivedName) return 0;
+    if (/(revenue|sales|total|amount|profit)/i.test(c.name)) return 1;
+    if (/(price|cost|value|spend)/i.test(c.name)) return 2;
+    if (/(qty|quantity|units)/i.test(c.name)) return 3;
+    return 4;
+  };
+  return [...metrics].sort((a, b) => score(a) - score(b));
+}
+
+/**
+ * Force the AI's understanding to respect column roles: identifiers can never
+ * be metrics, and the derived revenue metric is promoted to the front.
+ */
+function sanitizeUnderstanding(
+  u: Understanding,
+  ds: { name: string; row_count: number; columns: unknown; sample_rows: unknown },
+): Understanding {
+  const { cols, derived } = prepareAnalysis(ds);
+  const byName = new Map(cols.map((c) => [c.name, c]));
+  const validMetrics = orderMetrics(
+    (u.metric_columns ?? [])
+      .map((n) => byName.get(n))
+      .filter((c): c is ColumnMeta => !!c && c.role === "metric"),
+    derived?.name ?? null,
+  ).map((c) => c.name);
+  if (derived && !validMetrics.includes(derived.name)) validMetrics.unshift(derived.name);
+  const metrics = validMetrics.length ? validMetrics : orderMetrics(metricColumns(cols), derived?.name ?? null).map((c) => c.name);
+
+  const dims = (u.dimension_columns ?? []).filter((n) => byName.get(n)?.role === "categorical");
+  const timeCol = u.time_column && byName.get(u.time_column)?.role === "time"
+    ? u.time_column
+    : cols.find((c) => c.role === "time")?.name ?? null;
+
+  return {
+    ...u,
+    time_column: timeCol,
+    metric_columns: metrics,
+    dimension_columns: dims.length ? dims : cols.filter((c) => c.role === "categorical" && c.unique <= 50).map((c) => c.name),
+  };
+}
+
 
 function fmtNum(n: number): string {
   if (!Number.isFinite(n)) return "—";
