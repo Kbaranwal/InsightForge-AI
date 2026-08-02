@@ -173,7 +173,12 @@ export const createDataset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => createInput.parse(v))
   .handler(async ({ data, context }) => {
-    const columns = profileColumns(data.sampleRows);
+    const baseColumns = profileColumns(data.sampleRows);
+    // Derive Revenue (Quantity × UnitPrice) at ingest so every downstream
+    // consumer — charts, forecasts, chat — sees the same enriched schema.
+    const pair = detectRevenuePair(baseColumns as RoleColumn[], data.rowCount || data.sampleRows.length);
+    const enrichedRows = withDerivedFields(data.sampleRows, pair);
+    const columns = pair ? profileColumns(enrichedRows) : baseColumns;
     const { data: row, error } = await context.supabase
       .from("datasets")
       .insert({
@@ -185,7 +190,8 @@ export const createDataset = createServerFn({ method: "POST" })
         row_count: data.rowCount,
         column_count: columns.length,
         columns: columns as unknown as never,
-        sample_rows: data.sampleRows.slice(0, 200) as unknown as never,
+        sample_rows: enrichedRows.slice(0, 200) as unknown as never,
+
         status: "uploaded",
       })
       .select("id")
