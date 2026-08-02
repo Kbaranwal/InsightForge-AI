@@ -354,9 +354,10 @@ export const analyzeDataset = createServerFn({ method: "POST" })
       if (!insights) insights = fallbackInsights(ds as never, understanding);
 
       const forecasts = computeForecasts(
-        ds.sample_rows as Array<Record<string, unknown>>,
+        prepareAnalysis(ds as never).rows,
         understanding,
       );
+
 
       const { error: insErr } = await context.supabase.from("analyses").insert({
         dataset_id: data.id,
