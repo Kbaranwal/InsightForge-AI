@@ -243,20 +243,25 @@ export const deleteDataset = createServerFn({ method: "POST" })
 function buildDatasetContext(ds: {
   name: string; row_count: number; columns: unknown; sample_rows: unknown;
 }) {
-  const cols = ds.columns as ColumnMeta[];
-  const sample = (ds.sample_rows as Array<Record<string, unknown>>).slice(0, 30);
+  const { cols, rows, derived } = prepareAnalysis(ds);
+  const sample = rows.slice(0, 30);
   const colSummary = cols.map((c) => {
     const stats = c.isNumeric
       ? `min=${c.min} max=${c.max} mean=${c.mean?.toFixed(2)} stddev=${c.stddev?.toFixed(2)}`
       : c.isDate
       ? `range=${c.min}..${c.max}`
       : `top=${c.top?.slice(0, 3).map((t) => `${t.value}(${t.count})`).join(", ")}`;
-    return `- ${c.name} [${c.type}] unique=${c.unique} missing=${c.missing} ${stats}`;
+    return `- ${c.name} [${c.type}] role=${c.role ?? "unknown"} unique=${c.unique} missing=${c.missing} ${stats}`;
   }).join("\n");
+  const ids = cols.filter((c) => c.role === "identifier").map((c) => c.name);
+  const roleNote = `\nCOLUMN ROLES — obey strictly:\n- IDENTIFIER columns${ids.length ? ` (${ids.join(", ")})` : " (none)"} are record keys. NEVER average, sum, trend, correlate, forecast or KPI them. Use them only for counting records or as labels.\n- METRIC columns are the only valid measures.\n- CATEGORICAL columns are for grouping/segmentation only, never averaged.${derived ? `\n- "${derived.name}" is a DERIVED metric = ${derived.quantity} × ${derived.price}. Prefer it over the raw ${derived.quantity}/${derived.price} columns for totals, trends, peaks and KPIs.` : ""}`;
   return `Dataset: "${ds.name}" | ${ds.row_count.toLocaleString()} rows, ${cols.length} columns.
 
 COLUMNS:
 ${colSummary}
+${roleNote}
+
+
 
 SAMPLE ROWS (first ${sample.length} rows, JSON):
 ${JSON.stringify(sample).slice(0, 8000)}`;
