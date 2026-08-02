@@ -125,7 +125,38 @@ function profileColumns(rows: Array<Record<string, unknown>>): ColumnMeta[] {
     const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([value, count]) => ({ value, count }));
     return { name, type, missing, unique: uniqueSet.size, min, max, mean, stddev, top, isDate, isNumeric };
   });
+  // Tag every column with its analytical role (identifier / metric / categorical / time)
+  const { roles } = classifyColumns(metas as RoleColumn[], rows.length);
+  for (const m of metas) m.role = roles[m.name];
+  return metas;
 }
+
+/** Columns that may be used as measures (never identifiers). */
+function metricColumns(cols: ColumnMeta[]): ColumnMeta[] {
+  return cols.filter((c) => c.role === "metric");
+}
+function isIdentifier(c: ColumnMeta | null | undefined): boolean {
+  return c?.role === "identifier";
+}
+
+/**
+ * Build the analysis-ready view of a dataset: sample rows enriched with any
+ * derived metric (e.g. Quantity × UnitPrice → Revenue) and matching column meta.
+ */
+function prepareAnalysis(ds: { row_count: number; columns: unknown; sample_rows: unknown }) {
+  const cols = [...((ds.columns as ColumnMeta[]) ?? [])];
+  const rawRows = (ds.sample_rows as Array<Record<string, unknown>>) ?? [];
+  const pair = detectRevenuePair(cols as RoleColumn[], ds.row_count || rawRows.length);
+  const rows = withDerivedFields(rawRows, pair);
+  if (pair && !cols.some((c) => c.name === pair.name)) {
+    cols.push(derivedRevenueColumn(rows, pair) as unknown as ColumnMeta);
+  }
+  // Ensure roles exist for legacy datasets profiled before classification existed.
+  const { roles } = classifyColumns(cols as RoleColumn[], ds.row_count || rawRows.length || 1);
+  for (const c of cols) c.role = (c.role as ColumnRole) ?? roles[c.name];
+  return { cols, rows, derived: pair };
+}
+
 
 // ---------- Server functions ----------
 
