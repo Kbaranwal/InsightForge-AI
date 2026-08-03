@@ -92,6 +92,18 @@ function DatasetDetail() {
   );
   const chartRows = withDerivedFields(rawRows, revenuePair);
 
+  // Column metadata including any derived metric, with roles guaranteed —
+  // shared by the natural-language query engine and the anomaly panel.
+  const baseCols = ((dataset.columns as unknown as RoleColumn[]) ?? []).map((c) => ({ ...c }));
+  const chartCols: RoleColumn[] =
+    revenuePair && !baseCols.some((c) => c.name === revenuePair.name)
+      ? [...baseCols, derivedRevenueColumn(chartRows, revenuePair)]
+      : baseCols;
+  const roleMap = classifyColumns(chartCols, dataset.row_count || chartRows.length || 1).roles;
+  for (const c of chartCols) c.role = c.role ?? roleMap[c.name];
+
+
+
   const reportMut = useMutation({
     mutationFn: () => generateReport({ data: { id } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["dataset", id] }); toast.success("Report generated"); },
