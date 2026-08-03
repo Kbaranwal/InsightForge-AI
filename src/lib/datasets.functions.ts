@@ -7,6 +7,8 @@ import {
   classifyColumns, detectRevenuePair, withDerivedFields, derivedRevenueColumn,
   type ColumnRole, type RoleColumn,
 } from "./analysis/column-roles";
+import { detectAnomalies } from "./analysis/anomalies";
+import { explainAnomalies } from "./analysis/insight-agents.server";
 
 
 // ---------- Types ----------
@@ -353,10 +355,21 @@ export const analyzeDataset = createServerFn({ method: "POST" })
       );
       if (!insights) insights = fallbackInsights(ds as never, understanding);
 
-      const forecasts = computeForecasts(
-        prepareAnalysis(ds as never).rows,
-        understanding,
+      const prepared = prepareAnalysis(ds as never);
+      const forecasts = computeForecasts(prepared.rows, understanding);
+
+      // Anomaly Detection Agent — runs after column classification so only
+      // metric columns are scanned; identifiers are never flagged.
+      const anomalyReport = detectAnomalies(
+        prepared.rows,
+        prepared.cols as RoleColumn[],
+        ds.row_count || prepared.rows.length,
       );
+      anomalyReport.anomalies = await explainAnomalies({
+        datasetName: ds.name,
+        anomalies: anomalyReport.anomalies,
+        columns: prepared.cols as RoleColumn[],
+      });
 
 
       const { error: insErr } = await context.supabase.from("analyses").insert({
@@ -368,6 +381,7 @@ export const analyzeDataset = createServerFn({ method: "POST" })
         recommendations: insights.recommendations as unknown as never,
         executive_summary: insights.executive_summary,
         forecasts: ({ forecasts } as unknown as never),
+        anomalies: anomalyReport as unknown as never,
         model: HEAVY_MODEL,
       });
       if (insErr) throw new Error(insErr.message);
