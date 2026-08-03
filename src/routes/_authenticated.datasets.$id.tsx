@@ -314,6 +314,12 @@ function DatasetDetail() {
             )}
           </TabsContent>
 
+          <TabsContent value="anomalies" className="mt-6">
+            <AnomaliesPanel datasetId={id} rows={chartRows} />
+          </TabsContent>
+
+
+
           <TabsContent value="forecasts" className="mt-6 space-y-4">
             {forecasts.length === 0 ? (
               <div className="rounded-xl border border-border bg-card p-10 text-center">
