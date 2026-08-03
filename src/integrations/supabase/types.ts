@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       analyses: {
         Row: {
+          anomalies: Json | null
           created_at: string
           dashboard: Json | null
           dataset_id: string
@@ -30,6 +31,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          anomalies?: Json | null
           created_at?: string
           dashboard?: Json | null
           dataset_id: string
@@ -44,6 +46,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          anomalies?: Json | null
           created_at?: string
           dashboard?: Json | null
           dataset_id?: string
@@ -185,6 +188,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      pinned_widgets: {
+        Row: {
+          created_at: string
+          dataset_id: string
+          id: string
+          intent: Json
+          question: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dataset_id: string
+          id?: string
+          intent: Json
+          question: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dataset_id?: string
+          id?: string
+          intent?: Json
+          question?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinned_widgets_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

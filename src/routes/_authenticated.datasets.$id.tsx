@@ -15,12 +15,17 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { ChartRenderer } from "@/components/chart-renderer";
-import { detectRevenuePair, withDerivedFields, type RoleColumn } from "@/lib/analysis/column-roles";
+import {
+  detectRevenuePair, withDerivedFields, derivedRevenueColumn, classifyColumns, type RoleColumn,
+} from "@/lib/analysis/column-roles";
 import { ChatPanel } from "@/components/chat-panel";
+import { AnomaliesPanel } from "@/components/anomalies-panel";
+import { NaturalLanguageQuery } from "@/components/nl-query";
 import { getDataset, analyzeDataset, generateReport } from "@/lib/datasets.functions";
 import type { Dashboard, Insights, Understanding, Forecast, Report } from "@/lib/datasets.functions";
 import { exportCSV, exportExcel, exportPDF, exportPPTX, exportDOCX, exportReportPDF, type ExportPayload } from "@/lib/exports";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/_authenticated/datasets/$id")({
   component: DatasetDetail,
@@ -86,6 +91,18 @@ function DatasetDetail() {
     dataset.row_count || rawRows.length,
   );
   const chartRows = withDerivedFields(rawRows, revenuePair);
+
+  // Column metadata including any derived metric, with roles guaranteed —
+  // shared by the natural-language query engine and the anomaly panel.
+  const baseCols = ((dataset.columns as unknown as RoleColumn[]) ?? []).map((c) => ({ ...c }));
+  const chartCols: RoleColumn[] =
+    revenuePair && !baseCols.some((c) => c.name === revenuePair.name)
+      ? [...baseCols, derivedRevenueColumn(chartRows, revenuePair)]
+      : baseCols;
+  const roleMap = classifyColumns(chartCols, dataset.row_count || chartRows.length || 1).roles;
+  for (const c of chartCols) c.role = c.role ?? roleMap[c.name];
+
+
 
   const reportMut = useMutation({
     mutationFn: () => generateReport({ data: { id } }),
@@ -183,6 +200,7 @@ function DatasetDetail() {
           <TabsList>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
+            <TabsTrigger value="anomalies">Anomalies</TabsTrigger>
             <TabsTrigger value="forecasts">Forecasts</TabsTrigger>
             <TabsTrigger value="report">Report</TabsTrigger>
             <TabsTrigger value="chat">Chat</TabsTrigger>
@@ -190,7 +208,15 @@ function DatasetDetail() {
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6 space-y-6">
+            <NaturalLanguageQuery
+              datasetId={id}
+              rows={chartRows}
+              columns={chartCols}
+              rowCount={dataset.row_count}
+            />
+
             {analysis?.executive_summary && (
+
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 className="rounded-xl border border-border glass p-6">
                 <div className="text-xs text-primary font-medium mb-2 inline-flex items-center gap-1.5">
@@ -287,6 +313,12 @@ function DatasetDetail() {
               </div>
             )}
           </TabsContent>
+
+          <TabsContent value="anomalies" className="mt-6">
+            <AnomaliesPanel datasetId={id} rows={chartRows} />
+          </TabsContent>
+
+
 
           <TabsContent value="forecasts" className="mt-6 space-y-4">
             {forecasts.length === 0 ? (
