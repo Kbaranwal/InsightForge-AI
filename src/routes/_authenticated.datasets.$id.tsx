@@ -200,6 +200,7 @@ function DatasetDetail() {
           <TabsList>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
+            <TabsTrigger value="anomalies">Anomalies</TabsTrigger>
             <TabsTrigger value="forecasts">Forecasts</TabsTrigger>
             <TabsTrigger value="report">Report</TabsTrigger>
             <TabsTrigger value="chat">Chat</TabsTrigger>
@@ -207,7 +208,15 @@ function DatasetDetail() {
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6 space-y-6">
+            <NaturalLanguageQuery
+              datasetId={id}
+              rows={chartRows}
+              columns={chartCols}
+              rowCount={dataset.row_count}
+            />
+
             {analysis?.executive_summary && (
+
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 className="rounded-xl border border-border glass p-6">
                 <div className="text-xs text-primary font-medium mb-2 inline-flex items-center gap-1.5">
