@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import {
   LineChart, Line, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ComposedChart, ReferenceArea,
+  ComposedChart,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -268,6 +268,3 @@ export function AnomaliesPanel({
     </div>
   );
 }
-
-// Kept for potential band overlays; referenced to satisfy the linter.
-export const __unusedReferenceArea = ReferenceArea;
