@@ -15,12 +15,17 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { ChartRenderer } from "@/components/chart-renderer";
-import { detectRevenuePair, withDerivedFields, type RoleColumn } from "@/lib/analysis/column-roles";
+import {
+  detectRevenuePair, withDerivedFields, derivedRevenueColumn, classifyColumns, type RoleColumn,
+} from "@/lib/analysis/column-roles";
 import { ChatPanel } from "@/components/chat-panel";
+import { AnomaliesPanel } from "@/components/anomalies-panel";
+import { NaturalLanguageQuery } from "@/components/nl-query";
 import { getDataset, analyzeDataset, generateReport } from "@/lib/datasets.functions";
 import type { Dashboard, Insights, Understanding, Forecast, Report } from "@/lib/datasets.functions";
 import { exportCSV, exportExcel, exportPDF, exportPPTX, exportDOCX, exportReportPDF, type ExportPayload } from "@/lib/exports";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/_authenticated/datasets/$id")({
   component: DatasetDetail,
