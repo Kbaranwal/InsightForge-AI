@@ -13,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { registerStaleChunkRecovery } from "@/lib/stale-chunk-recovery";
+
 
 function NotFoundComponent() {
   return (
