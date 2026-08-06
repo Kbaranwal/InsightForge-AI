@@ -113,10 +113,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 const themeInitScript = `(function(){try{var t=localStorage.getItem('insightiq-theme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}var r=document.documentElement;r.classList.toggle('dark',t==='dark');r.classList.toggle('light',t==='light');r.style.colorScheme=t;}catch(e){}})();`;
 
+// Runs before application modules load, so it can recover even when the root
+// route bundle itself is the stale asset that failed to download.
+const earlyChunkRecoveryScript = `(function(){var k='insightiq:chunk-reload',p='__chunk_reload',c=60000;function stale(m){return /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Unable to preload CSS/i.test(m||'')}function recover(m,e){if(!stale(m))return;try{var n=Date.now(),last=Number(sessionStorage.getItem(k));if(Number.isFinite(last)&&n-last<c)return;sessionStorage.setItem(k,String(n))}catch(x){}if(e&&e.preventDefault)e.preventDefault();var u=new URL(location.href);u.searchParams.set(p,Date.now().toString());location.replace(u.toString())}addEventListener('vite:preloadError',function(e){recover(e&&e.payload&&e.payload.message||e&&e.message,e)});addEventListener('unhandledrejection',function(e){recover(e&&e.reason&&e.reason.message||String(e&&e.reason||''),e)});addEventListener('error',function(e){recover(e&&e.message||'',e)},true)})();`;
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="dark">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: earlyChunkRecoveryScript }} />
         <HeadContent />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
