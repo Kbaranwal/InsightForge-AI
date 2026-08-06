@@ -29,7 +29,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/datasets/$id")({
   component: DatasetDetail,
-  head: () => ({ meta: [{ title: "Analysis — InsightIQ" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Analysis — InsightForge AI" }, { name: "robots", content: "noindex" }] }),
 });
 
 function DatasetDetail() {

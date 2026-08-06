@@ -8,11 +8,11 @@ export const Route = createFileRoute("/")({
   component: Landing,
   head: () => ({
     meta: [
-      { title: "InsightIQ — Turn any dataset into a live AI dashboard" },
+      { title: "InsightForge AI — Turn any dataset into a live AI dashboard" },
       {
         name: "description",
         content:
-          "Drop in a CSV and InsightIQ auto-generates the dashboard, insights, forecasts, and a chat analyst grounded in your data.",
+          "Drop in a CSV and InsightForge AI auto-generates the dashboard, insights, forecasts, and a chat analyst grounded in your data.",
       },
     ],
   }),
@@ -38,7 +38,7 @@ function Landing() {
           <div className="size-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
             <BarChart3 className="size-4 text-white" />
           </div>
-          InsightIQ
+          InsightForge AI
         </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -58,7 +58,7 @@ function Landing() {
           transition={{ duration: 0.6 }}
           className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-card/50 text-xs text-muted-foreground mb-6"
         >
-          <span className="size-1.5 rounded-full bg-success" /> Multi-agent AI · powered by Lovable AI
+          <span className="size-1.5 rounded-full bg-success" /> Multi-agent AI · real-time insight engine
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 16 }}
@@ -74,7 +74,7 @@ function Landing() {
           transition={{ duration: 0.7, delay: 0.15 }}
           className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto"
         >
-          InsightIQ turns any spreadsheet into a live dashboard, executive summary, and chat analyst — automatically. No SQL, no chart wizards, no fake numbers.
+          InsightForge AI turns any spreadsheet into a live dashboard, executive summary, and chat analyst — automatically. No SQL, no chart wizards, no fake numbers.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -176,7 +176,7 @@ function Landing() {
       </section>
 
       <footer className="container-page py-10 border-t border-border text-sm text-muted-foreground flex flex-wrap justify-between gap-4">
-        <div>© {new Date().getFullYear()} InsightIQ</div>
+        <div>© {new Date().getFullYear()} InsightForge AI</div>
         <div className="flex gap-4">
           <Link to="/auth">Sign in</Link>
         </div>

@@ -1,8 +1,8 @@
-# InsightIQ
+# InsightForge AI
 
 AI-powered analytics SaaS. Upload any CSV or Excel, and a multi-agent AI pipeline auto-detects the schema, computes KPIs, generates an executive dashboard, writes insights, projects forecasts, and lets you chat with your data — all grounded strictly in the uploaded dataset.
 
-Built on the modern Lovable stack: TanStack Start (React 19 + Vite + SSR), Tailwind v4, shadcn/ui, Framer Motion, Recharts, Supabase (Postgres + Auth + Storage) via Lovable Cloud, and the Lovable AI Gateway (Google Gemini 2.5 Flash + Pro) for all AI.
+Built on a modern edge stack: TanStack Start (React 19 + Vite + SSR), Tailwind v4, shadcn/ui, Framer Motion, Recharts, Supabase (Postgres + Auth + Storage) and a hosted AI gateway (Google Gemini 2.5 Flash + Pro) for all AI.
 
 ## Features
 
@@ -22,7 +22,7 @@ Built on the modern Lovable stack: TanStack Start (React 19 + Vite + SSR), Tailw
 - **Exports** — PDF, PowerPoint (.pptx), Word (.docx), Excel (.xlsx), CSV
 - **Activity log** — Every action (upload, analysis, report, delete) with metadata
 - **Rate limiting** — Ad-hoc per-user hourly caps on analysis runs and report generation
-- **Security** — Postgres RLS on every table, private per-user Storage bucket, secure OAuth via Lovable broker
+- **Security** — Postgres RLS on every table, private per-user Storage bucket, secure OAuth via managed broker
 - **Design** — Modern dark/light SaaS aesthetic, glass cards, motion transitions, skeleton loaders
 
 ## Architecture
@@ -38,7 +38,7 @@ TanStack Server Functions  (Cloudflare Workers runtime)
   │
   ├── createDataset       → profile columns, persist metadata
   ├── analyzeDataset      → orchestrate AI agents  ─┐
-  ├── generateReport      → narrative report agent  │──► Lovable AI Gateway
+  ├── generateReport      → narrative report agent  │──► AI Gateway
   ├── /api/chat  (route)  → streamText chat analyst │        (Gemini 2.5)
   ├── listDatasets / getDataset / deleteDataset     │
   └── listAuditLogs                                 ▼
@@ -69,7 +69,7 @@ src/
     _authenticated.settings.tsx
   lib/
     datasets.functions.ts AI agents + rate limiting + audit logging (server fns)
-    ai-gateway.server.ts  Lovable AI Gateway provider
+    ai-gateway.server.ts  AI Gateway provider
     exports.ts            CSV/XLSX/PDF/PPTX/DOCX generators + report PDF
   components/
     chart-renderer.tsx    Typed chart spec → Recharts
@@ -81,14 +81,14 @@ src/
 
 ## Installation
 
-Prereqs: Node 20+, Bun (or pnpm), a Lovable Cloud project.
+Prereqs: Node 20+, Bun (or pnpm), a Supabase project.
 
 ```bash
 bun install
 bun run dev              # http://localhost:8080
 ```
 
-Required env (auto-set by Lovable Cloud):
+Required env (managed by the platform):
 
 ```
 VITE_SUPABASE_URL
@@ -102,7 +102,7 @@ LOVABLE_API_KEY                     # AI Gateway
 
 ## Deployment
 
-Deploy directly from Lovable — the stack is a single Vite build that runs SSR on Cloudflare Workers. Database, auth, storage, and the AI Gateway are managed by Lovable Cloud. No FastAPI, Vercel, or Render setup required.
+Deploy the stack is a single Vite build that runs SSR on Cloudflare Workers. Database, auth, storage, and the AI Gateway are managed by Supabase. No FastAPI, Vercel, or Render setup required.
 
 ## User guide
 
@@ -121,7 +121,7 @@ Deploy directly from Lovable — the stack is a single Vite build that runs SSR 
 - Every table has RLS scoped to `auth.uid()`; roles live in the separate `user_roles` table with a `has_role` security-definer function (no privilege escalation).
 - Storage bucket `datasets` is private, RLS-scoped by folder to the owning user.
 - No service-role key ships to the browser; only server functions use it, and only when authorization has been verified.
-- OAuth flows go through the Lovable-managed broker (iframe-safe).
+- OAuth flows go through the managed OAuth broker (iframe-safe).
 - Ad-hoc per-user hourly rate limits on `analysis.run` (20/hr) and `report.generate` (10/hr).
 
 ## API surface
@@ -141,4 +141,4 @@ All server-side logic is exposed through TanStack `createServerFn` RPCs (typed, 
 
 ## License
 
-Proprietary — built with Lovable.
+MIT

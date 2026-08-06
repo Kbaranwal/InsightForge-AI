@@ -163,7 +163,7 @@ export const Route = createFileRoute("/api/chat")({
           const colDesc = cols.map((c) => `${c.name} [${c.type}] unique=${c.unique} missing=${c.missing}`).join("\n");
           const stats = buildStatsContext(rows, cols, ds.row_count);
 
-          const system = `You are InsightIQ, a senior AI data analyst. Answer the user's questions using the dataset context below.
+          const system = `You are InsightForge AI, a senior AI data analyst. Answer the user's questions using the dataset context below.
 
 HOW TO ANSWER
 - Do the math yourself. Use the pre-computed COLUMN STATS and CROSS BREAKDOWNS to answer aggregate questions (totals, averages, top/bottom, breakdowns) directly — do NOT refuse just because a specific column name isn't present.

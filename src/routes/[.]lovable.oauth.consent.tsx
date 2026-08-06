@@ -95,16 +95,16 @@ function Consent() {
           <div className="size-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
             <BarChart3 className="size-4 text-white" />
           </div>
-          InsightIQ
+          InsightForge AI
         </div>
 
         <div className="rounded-2xl border border-border glass p-6 md:p-8 shadow-card">
           <div className="flex items-center gap-2 text-primary text-xs font-medium">
             <ShieldCheck className="size-4" /> Authorize access
           </div>
-          <h1 className="text-2xl font-semibold mt-2">Connect {clientName} to InsightIQ</h1>
+          <h1 className="text-2xl font-semibold mt-2">Connect {clientName} to InsightForge AI</h1>
           <p className="text-sm text-muted-foreground mt-2">
-            {clientName} will be able to call InsightIQ's tools while you are signed in — reading your datasets,
+            {clientName} will be able to call InsightForge AI's tools while you are signed in — reading your datasets,
             analyses, and activity as you.
           </p>
 
@@ -123,13 +123,13 @@ function Consent() {
                 </li>
               ))}
               <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-primary" /> Call enabled InsightIQ tools as you
+                <span className="size-1.5 rounded-full bg-primary" /> Call enabled InsightForge AI tools as you
               </li>
             </ul>
           </div>
 
           <p className="text-xs text-muted-foreground mt-4">
-            This does not bypass InsightIQ's permissions — row-level security still scopes data to your account.
+            This does not bypass InsightForge AI's permissions — row-level security still scopes data to your account.
           </p>
 
           {error && (

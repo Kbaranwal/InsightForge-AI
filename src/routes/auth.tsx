@@ -22,8 +22,8 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
   head: () => ({
     meta: [
-      { title: "Sign in — InsightIQ" },
-      { name: "description", content: "Sign in or create your InsightIQ account to start analyzing your data." },
+      { title: "Sign in — InsightForge AI" },
+      { name: "description", content: "Sign in or create your InsightForge AI account to start analyzing your data." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -124,7 +124,7 @@ function AuthPage() {
           <div className="size-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
             <BarChart3 className="size-4 text-white" />
           </div>
-          InsightIQ
+          InsightForge AI
         </Link>
 
         <div className="rounded-2xl border border-border glass p-6 md:p-8 shadow-card">
