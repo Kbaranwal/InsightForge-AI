@@ -9,6 +9,7 @@
  * when the failure is caused by something other than a stale build.
  */
 const RELOAD_FLAG = "insightiq:chunk-reload";
+const RELOAD_PARAM = "__chunk_reload";
 
 function isStaleChunkError(message: string): boolean {
   return (
@@ -26,7 +27,9 @@ function reloadOnce(): void {
   } catch {
     // sessionStorage unavailable (private mode) — reload anyway, once per load.
   }
-  window.location.reload();
+  const url = new URL(window.location.href);
+  url.searchParams.set(RELOAD_PARAM, Date.now().toString());
+  window.location.replace(url.toString());
 }
 
 /** Registers listeners; returns a cleanup function. Safe to call only client-side. */
@@ -35,6 +38,12 @@ export function registerStaleChunkRecovery(): () => void {
     sessionStorage.removeItem(RELOAD_FLAG);
   } catch {
     /* ignore */
+  }
+
+  const url = new URL(window.location.href);
+  if (url.searchParams.has(RELOAD_PARAM)) {
+    url.searchParams.delete(RELOAD_PARAM);
+    window.history.replaceState(window.history.state, "", url.toString());
   }
 
   const onError = (event: Event) => {
