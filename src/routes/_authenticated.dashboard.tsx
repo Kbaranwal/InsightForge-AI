@@ -15,7 +15,7 @@ import { listDatasets, deleteDataset, analyzeDataset } from "@/lib/datasets.func
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
-  head: () => ({ meta: [{ title: "Dashboard — InsightIQ" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — InsightForge AI" }, { name: "robots", content: "noindex" }] }),
 });
 
 function statusBadge(status: string) {
@@ -88,7 +88,7 @@ function DashboardPage() {
           </div>
           <h2 className="text-xl font-semibold">Upload your first dataset</h2>
           <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-            Drop in a CSV or Excel file and InsightIQ will generate the entire dashboard automatically. No chart setup.
+            Drop in a CSV or Excel file and InsightForge AI will generate the entire dashboard automatically. No chart setup.
           </p>
           <Link to="/upload" className="inline-block mt-6">
             <Button className="gap-2 btn-shine"><Upload className="size-4" /> Upload data</Button>

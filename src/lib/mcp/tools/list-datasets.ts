@@ -11,7 +11,7 @@ function supabaseForUser(ctx: ToolContext) {
 export default defineTool({
   name: "list_datasets",
   title: "List datasets",
-  description: "List the signed-in user's uploaded datasets in InsightIQ, most recent first.",
+  description: "List the signed-in user's uploaded datasets in InsightForge AI, most recent first.",
   inputSchema: {},
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (_input, ctx) => {

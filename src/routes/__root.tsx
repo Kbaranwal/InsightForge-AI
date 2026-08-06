@@ -78,14 +78,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "InsightIQ — AI Analytics for Every Dataset" },
+      { title: "InsightForge AI — AI Analytics for Every Dataset" },
       {
         name: "description",
         content:
           "Upload any dataset and get an AI-generated executive dashboard, insights, and a chat analyst — in seconds.",
       },
-      { name: "author", content: "InsightIQ" },
-      { property: "og:title", content: "InsightIQ — AI Analytics for Every Dataset" },
+      { name: "author", content: "InsightForge AI" },
+      { property: "og:title", content: "InsightForge AI — AI Analytics for Every Dataset" },
       {
         property: "og:description",
         content:

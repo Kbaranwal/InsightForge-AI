@@ -8,7 +8,7 @@ import { listAuditLogs } from "@/lib/datasets.functions";
 
 export const Route = createFileRoute("/_authenticated/activity")({
   component: ActivityPage,
-  head: () => ({ meta: [{ title: "Activity — InsightIQ" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Activity — InsightForge AI" }, { name: "robots", content: "noindex" }] }),
 });
 
 const ACTION_META: Record<string, { label: string; icon: typeof Sparkles; tone: string }> = {

@@ -1,4 +1,4 @@
-# InsightIQ
+# InsightForge AI
 
 AI-powered analytics SaaS. Upload any CSV or Excel, and a multi-agent AI pipeline auto-detects the schema, computes KPIs, generates an executive dashboard, writes insights, projects forecasts, and lets you chat with your data — all grounded strictly in the uploaded dataset.
 

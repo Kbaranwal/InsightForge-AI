@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/upload")({
   component: UploadPage,
-  head: () => ({ meta: [{ title: "New analysis — InsightIQ" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "New analysis — InsightForge AI" }, { name: "robots", content: "noindex" }] }),
 });
 
 const MAX_BYTES = 100 * 1024 * 1024;

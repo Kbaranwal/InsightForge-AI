@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
-  head: () => ({ meta: [{ title: "Reset password — InsightIQ" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Reset password — InsightForge AI" }, { name: "robots", content: "noindex" }] }),
 });
 
 function ResetPassword() {

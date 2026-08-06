@@ -108,7 +108,7 @@ export function exportPDF(p: ExportPayload) {
   };
   const pageBreakIfNeeded = (needed: number) => { if (y + needed > 800) { doc.addPage(); y = M; } };
 
-  h1(`InsightIQ Report — ${p.datasetName}`);
+  h1(`InsightForge AI Report — ${p.datasetName}`);
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(120);
   doc.text(`${p.rowCount.toLocaleString()} rows · ${p.columnCount} columns · generated ${new Date().toLocaleString()}`, M, y);
   doc.setTextColor(0); y += 20;
@@ -171,7 +171,7 @@ export function exportPPTX(p: ExportPayload) {
 
   const cover = pres.addSlide();
   cover.background = { color: "0F172A" };
-  cover.addText("InsightIQ Analysis Report", { x: 0.5, y: 2.5, w: 12, h: 1, fontSize: 44, bold: true, color: "FFFFFF" });
+  cover.addText("InsightForge AI Analysis Report", { x: 0.5, y: 2.5, w: 12, h: 1, fontSize: 44, bold: true, color: "FFFFFF" });
   cover.addText(p.datasetName, { x: 0.5, y: 3.6, w: 12, h: 0.6, fontSize: 24, color: "94A3B8" });
   cover.addText(`${p.rowCount.toLocaleString()} rows · ${p.columnCount} columns · ${new Date().toLocaleDateString()}`,
     { x: 0.5, y: 4.3, w: 12, h: 0.4, fontSize: 14, color: "64748B" });
@@ -297,7 +297,7 @@ export async function exportDOCX(p: ExportPayload) {
       properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
       children: [
         new Paragraph({ heading: HeadingLevel.TITLE, alignment: AlignmentType.LEFT,
-          children: [new TextRun(`InsightIQ Report — ${p.datasetName}`)] }),
+          children: [new TextRun(`InsightForge AI Report — ${p.datasetName}`)] }),
         new Paragraph({ children: [new TextRun({
           text: `${p.rowCount.toLocaleString()} rows · ${p.columnCount} columns · ${new Date().toLocaleString()}`,
           color: "64748B", italics: true,

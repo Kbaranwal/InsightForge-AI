@@ -57,7 +57,7 @@ function AuthenticatedLayout() {
             <div className="size-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
               <BarChart3 className="size-4 text-white" />
             </div>
-            InsightIQ
+            InsightForge AI
           </Link>
           <button className="md:hidden text-muted-foreground" onClick={() => setMobileOpen(false)}>
             <X className="size-5" />
@@ -113,7 +113,7 @@ function AuthenticatedLayout() {
       <main className="flex-1 min-w-0">
         <div className="md:hidden sticky top-0 z-20 bg-background/80 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
-          <span className="font-medium">InsightIQ</span>
+          <span className="font-medium">InsightForge AI</span>
         </div>
         <AnimatePresence mode="wait">
           <motion.div
