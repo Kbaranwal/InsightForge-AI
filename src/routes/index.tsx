@@ -267,7 +267,9 @@ function Landing() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-40px" }}
               transition={{ duration: 0.4, delay: i * 0.05 }}
-              className="rounded-xl border border-border bg-card p-6 hover:border-primary/40 transition"
+              whileHover={{ y: -6 }}
+              className="group rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-card"
+
             >
               <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                 <f.icon className="size-5 text-primary" />
