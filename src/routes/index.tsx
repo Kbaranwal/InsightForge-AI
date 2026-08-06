@@ -269,11 +269,11 @@ function Landing() {
               transition={{ duration: 0.4, delay: i * 0.05 }}
               whileHover={{ y: -6 }}
               className="group rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-card"
-
             >
-              <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+              <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary/20">
                 <f.icon className="size-5 text-primary" />
               </div>
+
               <h3 className="font-semibold">{f.title}</h3>
               <p className="text-sm text-muted-foreground mt-1.5">{f.desc}</p>
             </motion.div>
