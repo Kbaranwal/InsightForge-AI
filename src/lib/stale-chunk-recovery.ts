@@ -10,6 +10,7 @@
  */
 const RELOAD_FLAG = "insightiq:chunk-reload";
 const RELOAD_PARAM = "__chunk_reload";
+const RELOAD_COOLDOWN_MS = 60_000;
 
 function isStaleChunkError(message: string): boolean {
   return (
@@ -22,8 +23,9 @@ function isStaleChunkError(message: string): boolean {
 
 function reloadOnce(): void {
   try {
-    if (sessionStorage.getItem(RELOAD_FLAG)) return;
-    sessionStorage.setItem(RELOAD_FLAG, "1");
+    const previousReload = Number(sessionStorage.getItem(RELOAD_FLAG));
+    if (Number.isFinite(previousReload) && Date.now() - previousReload < RELOAD_COOLDOWN_MS) return;
+    sessionStorage.setItem(RELOAD_FLAG, Date.now().toString());
   } catch {
     // sessionStorage unavailable (private mode) — reload anyway, once per load.
   }
@@ -34,12 +36,6 @@ function reloadOnce(): void {
 
 /** Registers listeners; returns a cleanup function. Safe to call only client-side. */
 export function registerStaleChunkRecovery(): () => void {
-  try {
-    sessionStorage.removeItem(RELOAD_FLAG);
-  } catch {
-    /* ignore */
-  }
-
   const url = new URL(window.location.href);
   if (url.searchParams.has(RELOAD_PARAM)) {
     url.searchParams.delete(RELOAD_PARAM);
