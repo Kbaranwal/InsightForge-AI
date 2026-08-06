@@ -58,6 +58,23 @@ const features = [
   { icon: Zap, title: "Seconds, not sprints", desc: "From upload to executive-ready dashboard in under a minute for typical datasets." },
 ];
 
+const steps = [
+  { icon: Upload, title: "Upload", desc: "Drop a CSV or Excel file. Schema, types and column roles are detected instantly." },
+  { icon: Wand2, title: "AI analyzes", desc: "Specialized agents clean, profile, and interrogate your data — no configuration." },
+  { icon: LayoutDashboard, title: "Get your dashboard", desc: "KPIs, charts, insights, forecasts and an executive summary, ready to share." },
+];
+
+const proofStats = [
+  { value: 1200, suffix: "+", label: "Datasets analyzed" },
+  { value: 8, suffix: "", label: "AI agents per analysis" },
+  { value: 45, suffix: "s", label: "Median time to dashboard" },
+  { value: 99.9, suffix: "%", label: "Uptime", decimals: 1 },
+];
+
+const logos = ["Northwind", "Acme Analytics", "Lumen Labs", "Vertex Retail", "Bluepeak"];
+
+
+
 function Landing() {
   return (
     <div className="min-h-screen relative overflow-hidden">
