@@ -5,23 +5,6 @@ import { BarChart3, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
-// Local typed wrapper — the supabase-js auth.oauth namespace is in beta and
-// TypeScript may not surface the methods yet. Keep this narrow to the three
-// calls the consent route needs.
-type OAuthClient = { name?: string; client_name?: string; redirect_uri?: string; scope?: string };
-type OAuthAuthDetails = {
-  client?: OAuthClient;
-  scope?: string;
-  redirect_url?: string;
-  redirect_to?: string;
-};
-type OAuthResult<T> = { data: T | null; error: { message: string } | null };
-type OAuthApi = {
-  getAuthorizationDetails: (id: string) => Promise<OAuthResult<OAuthAuthDetails>>;
-  approveAuthorization: (id: string) => Promise<OAuthResult<{ redirect_url?: string; redirect_to?: string }>>;
-  denyAuthorization: (id: string) => Promise<OAuthResult<{ redirect_url?: string; redirect_to?: string }>>;
-};
-const oauth = (supabase.auth as unknown as { oauth: OAuthApi }).oauth;
 
 export const Route = createFileRoute("/.lovable/oauth/consent")({
   // Browser-only: supabase-js reads its session from localStorage.
