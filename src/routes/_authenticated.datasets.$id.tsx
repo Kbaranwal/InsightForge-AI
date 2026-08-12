@@ -51,6 +51,13 @@ function DatasetDetail() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
+  // Declared before any early return so hook order stays stable across renders.
+  const reportMut = useMutation({
+    mutationFn: () => generateReport({ data: { id } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["dataset", id] }); toast.success("Report generated"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
   if (isLoading) {
     return (
       <div className="container-page py-8 space-y-4">
