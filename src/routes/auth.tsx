@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-r
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { z } from "zod";
-import { BarChart3, Loader2, Mail, KeyRound } from "lucide-react";
+import { Loader2, Mail, KeyRound } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -120,11 +121,8 @@ function AuthPage() {
         transition={{ duration: 0.4 }}
         className="w-full max-w-md"
       >
-        <Link to="/" className="flex items-center justify-center gap-2 font-semibold mb-8">
-          <div className="size-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
-            <BarChart3 className="size-4 text-white" />
-          </div>
-          InsightForge AI
+        <Link to="/" className="flex justify-center mb-8">
+          <BrandLogo className="text-lg" />
         </Link>
 
         <div className="rounded-2xl border border-border glass p-6 md:p-8 shadow-card">

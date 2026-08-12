@@ -96,7 +96,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/favicon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "" },
       {
@@ -119,7 +120,9 @@ const earlyChunkRecoveryScript = `(function(){var k='insightiq:chunk-reload',p='
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    // The inline theme script rewrites these attributes before hydration, so the
+    // server/client mismatch on <html> is expected and intentionally suppressed.
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: earlyChunkRecoveryScript }} />
         <HeadContent />

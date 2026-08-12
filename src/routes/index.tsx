@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, useInView } from "framer-motion";
-import { ArrowRight, BarChart3, Bot, Sparkles, Upload, Zap, ShieldCheck, LineChart, Wand2, LayoutDashboard } from "lucide-react";
+import { ArrowRight, Bot, Sparkles, Upload, Zap, ShieldCheck, LineChart, Wand2, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BrandLogo } from "@/components/brand-logo";
 
 /** Animates a number from 0 to `value` once the element scrolls into view. */
 function CountUp({ value, prefix = "", suffix = "", decimals = 0 }: { value: number; prefix?: string; suffix?: string; decimals?: number }) {
@@ -81,16 +82,13 @@ function Landing() {
       <div className="absolute inset-0 -z-10" style={{ background: "var(--gradient-mesh)" }} />
       <div className="absolute inset-0 -z-10 grid-bg opacity-40" />
 
-      <header className="container-page flex items-center justify-between py-6">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-lg">
-          <div className="size-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
-            <BarChart3 className="size-4 text-white" />
-          </div>
-          InsightForge AI
+      <header className="container-page sticky top-0 z-30 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-4 bg-background/70 backdrop-blur border-b border-border/60 md:py-5">
+        <Link to="/" className="min-w-0">
+          <BrandLogo className="text-base md:text-lg" />
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
-          <Link to="/auth">
+          <Link to="/auth" className="hidden sm:block">
             <Button variant="ghost" size="sm">Sign in</Button>
           </Link>
           <Link to="/auth">
@@ -99,12 +97,12 @@ function Landing() {
         </div>
       </header>
 
-      <section className="container-page pt-16 pb-24 md:pt-28 md:pb-32 text-center relative">
+      <section className="container-page pt-12 pb-16 sm:pb-24 md:pt-24 md:pb-32 text-center relative">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-card/50 text-xs text-muted-foreground mb-6"
+          className="inline-flex max-w-full items-center gap-2 px-3 py-1 rounded-full border border-border bg-card/50 text-[11px] sm:text-xs text-muted-foreground mb-6"
         >
           <span className="size-1.5 rounded-full bg-success" /> Multi-agent AI · real-time insight engine
         </motion.div>
@@ -112,7 +110,7 @@ function Landing() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.05 }}
-          className="text-5xl md:text-7xl font-bold tracking-tight max-w-4xl mx-auto leading-[1.05]"
+          className="text-[2.1rem] sm:text-5xl md:text-7xl font-bold tracking-tight max-w-4xl mx-auto leading-[1.08] md:leading-[1.05] text-balance"
         >
           Upload data. <span className="text-gradient">Get answers.</span>
         </motion.h1>
@@ -120,7 +118,7 @@ function Landing() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.15 }}
-          className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto"
+          className="mt-5 text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto text-pretty"
         >
           InsightForge AI turns any spreadsheet into a live dashboard, executive summary, and chat analyst — automatically. No SQL, no chart wizards, no fake numbers.
         </motion.p>
@@ -128,15 +126,15 @@ function Landing() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.25 }}
-          className="mt-10 flex flex-wrap items-center justify-center gap-3"
+          className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3"
         >
-          <Link to="/auth">
-            <Button size="lg" className="btn-shine gap-2">
+          <Link to="/auth" className="w-full sm:w-auto">
+            <Button size="lg" className="btn-shine gap-2 w-full sm:w-auto">
               Start analyzing free <ArrowRight className="size-4" />
             </Button>
           </Link>
-          <a href="#features">
-            <Button size="lg" variant="outline">See how it works</Button>
+          <a href="#features" className="w-full sm:w-auto">
+            <Button size="lg" variant="outline" className="w-full sm:w-auto">See how it works</Button>
           </a>
         </motion.div>
 
@@ -144,16 +142,16 @@ function Landing() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.4 }}
-          className="mt-20 mx-auto max-w-5xl rounded-2xl border border-border glass p-2 shadow-card"
+          className="mt-12 md:mt-20 mx-auto max-w-5xl rounded-2xl border border-border glass p-1.5 sm:p-2 shadow-card"
         >
           <div className="rounded-xl overflow-hidden bg-card">
-            <div className="flex items-center gap-1.5 px-4 py-2 border-b border-border">
-              <div className="size-2.5 rounded-full bg-destructive/60" />
-              <div className="size-2.5 rounded-full bg-warning/60" />
-              <div className="size-2.5 rounded-full bg-success/60" />
-              <span className="ml-3 text-xs text-muted-foreground font-mono truncate">insightforge.ai/datasets/q4-revenue</span>
+            <div className="flex min-w-0 items-center gap-1.5 px-3 sm:px-4 py-2 border-b border-border">
+              <div className="size-2.5 shrink-0 rounded-full bg-destructive/60" />
+              <div className="size-2.5 shrink-0 rounded-full bg-warning/60" />
+              <div className="size-2.5 shrink-0 rounded-full bg-success/60" />
+              <span className="ml-2 sm:ml-3 min-w-0 text-[10px] sm:text-xs text-muted-foreground font-mono truncate">insightforge.ai/datasets/q4-revenue</span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 sm:p-6 bg-gradient-to-b from-transparent to-primary/5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 p-3 sm:p-6 bg-gradient-to-b from-transparent to-primary/5">
               {[
                 { label: "Total revenue", value: 1.24, prefix: "$", suffix: "M", decimals: 2, delta: "+18.2%" },
                 { label: "Active accounts", value: 3412, prefix: "", suffix: "", decimals: 0, delta: "+124" },
@@ -169,8 +167,8 @@ function Landing() {
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 px-4 sm:px-6 pb-4 sm:pb-6">
-              <div className="md:col-span-2 h-48 rounded-lg border border-border bg-card p-4 flex items-end gap-1">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 px-3 sm:px-6 pb-3 sm:pb-6">
+              <div className="md:col-span-2 h-36 sm:h-48 rounded-lg border border-border bg-card p-3 sm:p-4 flex items-end gap-[3px] sm:gap-1">
                 {Array.from({ length: 32 }).map((_, i) => {
                   const h = 20 + Math.sin(i / 3) * 30 + i * 1.4;
                   return (
@@ -185,7 +183,7 @@ function Landing() {
                   );
                 })}
               </div>
-              <div className="h-48 rounded-lg border border-border bg-card p-4">
+              <div className="md:h-48 rounded-lg border border-border bg-card p-4">
                 <div className="text-xs text-muted-foreground">AI Summary</div>
                 <p className="text-sm mt-2 leading-relaxed">Revenue is trending up 18% QoQ, driven by enterprise deals. Watch the small dip in week 3 — likely a US holiday effect.</p>
               </div>
@@ -196,10 +194,10 @@ function Landing() {
 
       {/* Social proof */}
       <section className="container-page pb-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           {proofStats.map((s) => (
-            <div key={s.label} className="rounded-xl border border-border bg-card/60 p-5 text-center">
-              <div className="text-2xl md:text-3xl font-bold tabular-nums text-gradient">
+            <div key={s.label} className="min-w-0 rounded-xl border border-border bg-card/60 p-4 sm:p-5 text-center">
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold tabular-nums text-gradient">
                 <CountUp value={s.value} suffix={s.suffix} decimals={s.decimals ?? 0} />
               </div>
               <div className="text-xs text-muted-foreground mt-1">{s.label}</div>
@@ -208,7 +206,7 @@ function Landing() {
         </div>
         <div className="mt-8 text-center">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Trusted by data teams at</p>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 sm:gap-x-8 gap-y-3">
             {logos.map((l) => (
               <span key={l} className="text-sm font-semibold text-muted-foreground/70 hover:text-foreground transition-colors">{l}</span>
             ))}
@@ -217,12 +215,12 @@ function Landing() {
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" className="container-page py-20">
+      <section id="how-it-works" className="container-page py-14 md:py-20">
         <div className="text-center max-w-2xl mx-auto">
           <div className="text-sm text-primary font-medium">How it works</div>
-          <h2 className="text-3xl md:text-4xl font-bold mt-2 tracking-tight">Three steps to your dashboard</h2>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-2 tracking-tight">Three steps to your dashboard</h2>
         </div>
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="mt-8 md:mt-12 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {steps.map((s, i) => (
             <motion.div
               key={s.title}
@@ -249,17 +247,17 @@ function Landing() {
       </section>
 
 
-      <section id="features" className="container-page py-24">
+      <section id="features" className="container-page py-14 md:py-24 scroll-mt-20">
         <div className="max-w-2xl">
           <div className="text-sm text-primary font-medium">The platform</div>
-          <h2 className="text-3xl md:text-4xl font-bold mt-2 tracking-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-2 tracking-tight">
             A team of AI analysts, always on call.
           </h2>
           <p className="text-muted-foreground mt-3">
             Eight specialized agents work together: cleaning your data, understanding it, generating the dashboard, extracting insights, and chatting with you about the results.
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8 md:mt-12">
           {features.map((f, i) => (
             <motion.div
               key={f.title}
@@ -281,21 +279,24 @@ function Landing() {
         </div>
       </section>
 
-      <section className="container-page pb-24">
-        <div className="rounded-2xl border border-border glass p-10 md:p-14 text-center relative overflow-hidden">
+      <section className="container-page pb-16 md:pb-24">
+        <div className="rounded-2xl border border-border glass p-7 sm:p-10 md:p-14 text-center relative overflow-hidden">
           <div className="absolute inset-0 -z-10" style={{ background: "var(--gradient-hero)" }} />
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight">Your next dashboard is one drop away.</h2>
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight text-balance">Your next dashboard is one drop away.</h2>
           <p className="text-muted-foreground mt-4 max-w-xl mx-auto">Free to try. No credit card. Your data stays yours.</p>
-          <Link to="/auth" className="inline-block mt-8">
-            <Button size="lg" className="btn-shine gap-2">Start free <ArrowRight className="size-4" /></Button>
+          <Link to="/auth" className="mt-8 block sm:inline-block">
+            <Button size="lg" className="btn-shine gap-2 w-full sm:w-auto">Start free <ArrowRight className="size-4" /></Button>
           </Link>
         </div>
       </section>
 
-      <footer className="container-page py-10 border-t border-border text-sm text-muted-foreground flex flex-wrap justify-between gap-4">
-        <div>© {new Date().getFullYear()} InsightForge AI</div>
-        <div className="flex gap-4">
-          <Link to="/auth">Sign in</Link>
+      <footer className="container-page py-8 md:py-10 border-t border-border text-sm text-muted-foreground flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <BrandLogo size="sm" showText={false} />
+          <span>© {new Date().getFullYear()} InsightForge AI</span>
+        </div>
+        <div className="flex flex-wrap gap-4">
+          <Link to="/auth" className="hover:text-foreground transition-colors">Sign in</Link>
         </div>
       </footer>
     </div>

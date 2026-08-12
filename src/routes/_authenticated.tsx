@@ -2,8 +2,9 @@ import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BarChart3, LayoutDashboard, Upload, Settings, LogOut, ChevronRight, Sparkles, Menu, X, Activity,
+  LayoutDashboard, Upload, Settings, LogOut, ChevronRight, Sparkles, Menu, X, Activity,
 } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -53,11 +54,8 @@ function AuthenticatedLayout() {
         mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         <div className="p-4 flex items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-2 font-semibold">
-            <div className="size-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
-              <BarChart3 className="size-4 text-white" />
-            </div>
-            InsightForge AI
+          <Link to="/dashboard" className="min-w-0">
+            <BrandLogo />
           </Link>
           <button className="md:hidden text-muted-foreground" onClick={() => setMobileOpen(false)}>
             <X className="size-5" />
@@ -112,8 +110,9 @@ function AuthenticatedLayout() {
 
       <main className="flex-1 min-w-0">
         <div className="md:hidden sticky top-0 z-20 bg-background/80 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3">
-          <button onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
-          <span className="font-medium">InsightForge AI</span>
+          <button aria-label="Open menu" onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
+          <BrandLogo size="sm" />
+          <div className="ml-auto"><ThemeToggle /></div>
         </div>
         <AnimatePresence mode="wait">
           <motion.div

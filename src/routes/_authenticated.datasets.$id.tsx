@@ -51,11 +51,18 @@ function DatasetDetail() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
+  // Declared before any early return so hook order stays stable across renders.
+  const reportMut = useMutation({
+    mutationFn: () => generateReport({ data: { id } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["dataset", id] }); toast.success("Report generated"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
   if (isLoading) {
     return (
       <div className="container-page py-8 space-y-4">
         <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
         <Skeleton className="h-80 rounded-xl" />
@@ -104,11 +111,6 @@ function DatasetDetail() {
 
 
 
-  const reportMut = useMutation({
-    mutationFn: () => generateReport({ data: { id } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["dataset", id] }); toast.success("Report generated"); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-  });
 
   function runExport(fmt: "csv" | "xlsx" | "pdf" | "pptx" | "docx") {
     try {
@@ -134,23 +136,23 @@ function DatasetDetail() {
 
   return (
     <div className="container-page py-6 md:py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 mb-6">
         <div className="min-w-0">
           <button onClick={() => navigate({ to: "/dashboard" })}
                   className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-2">
             <ArrowLeft className="size-3" /> Back to datasets
           </button>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">{dashboard?.title ?? dataset.name}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight break-words">{dashboard?.title ?? dataset.name}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {dataset.row_count.toLocaleString()} rows · {dataset.column_count} columns
             {understanding?.domain && <> · <span className="text-accent">{understanding.domain}</span></>}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {dataset.status === "ready" && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2 flex-1 sm:flex-none">
                   <Download className="size-4" /> Export
                 </Button>
               </DropdownMenuTrigger>
@@ -166,7 +168,7 @@ function DatasetDetail() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => rerun.mutate()} disabled={rerun.isPending}>
+          <Button variant="outline" size="sm" className="gap-2 flex-1 sm:flex-none" onClick={() => rerun.mutate()} disabled={rerun.isPending}>
             <Sparkles className="size-4" /> {rerun.isPending ? "Restarting…" : "Re-run analysis"}
           </Button>
         </div>
@@ -197,7 +199,7 @@ function DatasetDetail() {
 
       {dataset.status === "ready" && dashboard && (
         <Tabs defaultValue="dashboard">
-          <TabsList>
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
             <TabsTrigger value="anomalies">Anomalies</TabsTrigger>

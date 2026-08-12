@@ -4,24 +4,8 @@ import { motion } from "framer-motion";
 import { BarChart3, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { getOAuthApi } from "@/lib/supabase-oauth";
 
-// Local typed wrapper — the supabase-js auth.oauth namespace is in beta and
-// TypeScript may not surface the methods yet. Keep this narrow to the three
-// calls the consent route needs.
-type OAuthClient = { name?: string; client_name?: string; redirect_uri?: string; scope?: string };
-type OAuthAuthDetails = {
-  client?: OAuthClient;
-  scope?: string;
-  redirect_url?: string;
-  redirect_to?: string;
-};
-type OAuthResult<T> = { data: T | null; error: { message: string } | null };
-type OAuthApi = {
-  getAuthorizationDetails: (id: string) => Promise<OAuthResult<OAuthAuthDetails>>;
-  approveAuthorization: (id: string) => Promise<OAuthResult<{ redirect_url?: string; redirect_to?: string }>>;
-  denyAuthorization: (id: string) => Promise<OAuthResult<{ redirect_url?: string; redirect_to?: string }>>;
-};
-const oauth = (supabase.auth as unknown as { oauth: OAuthApi }).oauth;
 
 export const Route = createFileRoute("/.lovable/oauth/consent")({
   // Browser-only: supabase-js reads its session from localStorage.
@@ -39,7 +23,7 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   },
   loader: async ({ location }) => {
     const authorizationId = new URLSearchParams(location.search).get("authorization_id")!;
-    const { data, error } = await oauth.getAuthorizationDetails(authorizationId);
+    const { data, error } = await getOAuthApi().getAuthorizationDetails(authorizationId);
     if (error) throw new Error(error.message);
     const immediate = data?.redirect_url ?? data?.redirect_to;
     if (immediate && !data?.client) throw redirect({ href: immediate });
@@ -72,8 +56,8 @@ function Consent() {
     setBusy(approve ? "approve" : "deny");
     setError(null);
     const { data, error } = approve
-      ? await oauth.approveAuthorization(authorization_id)
-      : await oauth.denyAuthorization(authorization_id);
+      ? await getOAuthApi().approveAuthorization(authorization_id)
+      : await getOAuthApi().denyAuthorization(authorization_id);
     if (error) { setBusy(null); setError(error.message); return; }
     const target = data?.redirect_url ?? data?.redirect_to;
     if (!target) { setBusy(null); setError("No redirect returned by the authorization server."); return; }
