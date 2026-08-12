@@ -111,11 +111,6 @@ function DatasetDetail() {
 
 
 
-  const reportMut = useMutation({
-    mutationFn: () => generateReport({ data: { id } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["dataset", id] }); toast.success("Report generated"); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-  });
 
   function runExport(fmt: "csv" | "xlsx" | "pdf" | "pptx" | "docx") {
     try {
