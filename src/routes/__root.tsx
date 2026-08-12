@@ -120,7 +120,9 @@ const earlyChunkRecoveryScript = `(function(){var k='insightiq:chunk-reload',p='
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    // The inline theme script rewrites these attributes before hydration, so the
+    // server/client mismatch on <html> is expected and intentionally suppressed.
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: earlyChunkRecoveryScript }} />
         <HeadContent />
