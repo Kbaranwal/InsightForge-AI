@@ -136,7 +136,7 @@ function DatasetDetail() {
 
   return (
     <div className="container-page py-6 md:py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 mb-6">
         <div className="min-w-0">
           <button onClick={() => navigate({ to: "/dashboard" })}
                   className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-2">
