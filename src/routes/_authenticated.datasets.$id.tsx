@@ -199,7 +199,7 @@ function DatasetDetail() {
 
       {dataset.status === "ready" && dashboard && (
         <Tabs defaultValue="dashboard">
-          <TabsList>
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
             <TabsTrigger value="anomalies">Anomalies</TabsTrigger>
