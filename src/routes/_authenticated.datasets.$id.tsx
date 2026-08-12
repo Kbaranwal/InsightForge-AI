@@ -148,11 +148,11 @@ function DatasetDetail() {
             {understanding?.domain && <> · <span className="text-accent">{understanding.domain}</span></>}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {dataset.status === "ready" && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2 flex-1 sm:flex-none">
                   <Download className="size-4" /> Export
                 </Button>
               </DropdownMenuTrigger>
