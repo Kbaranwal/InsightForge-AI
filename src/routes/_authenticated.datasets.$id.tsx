@@ -142,8 +142,8 @@ function DatasetDetail() {
                   className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-2">
             <ArrowLeft className="size-3" /> Back to datasets
           </button>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">{dashboard?.title ?? dataset.name}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight break-words">{dashboard?.title ?? dataset.name}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {dataset.row_count.toLocaleString()} rows · {dataset.column_count} columns
             {understanding?.domain && <> · <span className="text-accent">{understanding.domain}</span></>}
           </p>
