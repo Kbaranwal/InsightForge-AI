@@ -168,7 +168,7 @@ function DatasetDetail() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => rerun.mutate()} disabled={rerun.isPending}>
+          <Button variant="outline" size="sm" className="gap-2 flex-1 sm:flex-none" onClick={() => rerun.mutate()} disabled={rerun.isPending}>
             <Sparkles className="size-4" /> {rerun.isPending ? "Restarting…" : "Re-run analysis"}
           </Button>
         </div>
