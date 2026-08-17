@@ -1,4 +1,4 @@
-🔗 Live demo: insight-genie-ai-32.lovable.app
+🔗 Live demo: https://insight-forge-gen-ai.lovable.app
 
 # InsightForge AI
 
